@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Take a break — Minco</title>
+  <link rel="icon" href="../assets/img/mincologo.png" type="image/png" />
+  <link rel="stylesheet" href="../assets/css/main.css" />
+  <link rel="stylesheet" href="../assets/css/games.css" />
+  <script src="../assets/js/main.js" defer></script>
+  <script src="../assets/js/games.js" defer></script>
+</head>
+<body>
+
+  <header class="navbar" id="navbar">
+    <div class="container nav-inner">
+      <a href="home.html" class="logo">
+        <img src="../assets/img/mincologo.png" alt="Minco logo" class="logo-img" />
+        <span class="logo-text">Minco</span>
+      </a>
+      <nav class="nav-links" id="navLinks">
+        <a href="home.html">User page</a>
+        <a href="guidelines.html">Safe space</a>
+        <a href="games.html" class="btn btn-small btn-primary">Take a break</a>
+      </nav>
+      <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="back-bar"><a href="home.html">← Back to user page</a></div>
+
+  <main class="games-wrap">
+    <div class="games-hero">
+      <p class="badge">Mind rest corner</p>
+      <h1>Take a <span class="gradient-text">breather</span></h1>
+      <p>Short, calm games for heavy moments. No scores chasing you, no timers punishing you — just a few quiet minutes.</p>
+    </div>
+
+    <div class="game-tabs">
+      <button class="active" data-game="breath">Breathing</button>
+      <button data-game="memory">Memory match</button>
+      <button data-game="ttt">Tic-tac-toe</button>
+    </div>
+
+    <!-- 1. Breathing -->
+    <section class="game-panel active" id="game-breath">
+      <h2>Calm breathing</h2>
+      <p class="sub">4 seconds in · 4 hold · 6 out. Follow the circle.</p>
+      <div class="breath-circle" id="breathCircle"><span id="breathLabel">Ready</span></div>
+      <p class="breath-stats" id="breathCount">0 calm cycles completed</p>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="breathBtn">Begin</button>
+      </div>
+    </section>
+
+    <!-- 2. Memory -->
+    <section class="game-panel" id="game-memory">
+      <h2>Memory match</h2>
+      <p class="sub"><span id="memMoves">0 moves</span> · <span id="memBest"></span></p>
+      <div class="memory-grid" id="memoryGrid"></div>
+      <div class="btn-row">
+        <button class="btn btn-outline" id="memRestart">Shuffle again</button>
+      </div>
+    </section>
+
+    <!-- 3. Tic-tac-toe -->
+    <section class="game-panel" id="game-ttt">
+      <h2>Tic-tac-toe vs Calm AI</h2>
+      <p class="sub" id="tttStatus">Your move — no rush.</p>
+      <div class="ttt-board" id="tttBoard"></div>
+      <p class="ttt-score" id="tttScore"></p>
+      <div class="btn-row">
+        <button class="btn btn-outline" id="tttRestart">Rematch</button>
+      </div>
+    </section>
+
+    <div class="games-note">
+      These games are just for rest — they never affect your support, karma, or standing. If play stops feeling restful, step back to the feed or take a real break.
+    </div>
+  </main>
+
+</body>
+</html>
