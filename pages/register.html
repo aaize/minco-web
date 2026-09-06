@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create account — Minco</title>
+  <link rel="icon" href="../assets/img/mincologo.png" type="image/png" />
+  <link rel="stylesheet" href="../assets/css/main.css" />
+  <link rel="stylesheet" href="../assets/css/auth.css" />
+  <script src="../assets/js/main.js" defer></script>
+  <script src="../assets/js/auth.js" defer></script>
+</head>
+<body>
+
+  <header class="navbar" id="navbar">
+    <div class="container nav-inner">
+      <a href="../index.html" class="logo">
+        <img src="../assets/img/mincologo.png" alt="Minco logo" class="logo-img" />
+        <span class="logo-text">Minco</span>
+      </a>
+      <nav class="nav-links" id="navLinks">
+        <a href="../index.html">Home</a>
+        <a href="login.html" class="btn btn-small btn-outline">Log in</a>
+      </nav>
+      <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <main class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <img src="../assets/img/mincologo.png" alt="Minco logo" class="logo-img" />
+        <strong>Minco</strong>
+      </div>
+      <h1>Create your account</h1>
+      <p class="auth-sub">Join a kind, judgement-free peer community. Anonymous names welcome.</p>
+
+      <div class="form-error" id="formError"></div>
+
+      <form id="registerForm">
+        <div class="field">
+          <label for="name">Display name</label>
+          <input id="name" type="text" placeholder="e.g. Quiet River" required autocomplete="nickname" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+        <div class="field">
+          <label for="password">Password (6+ characters)</label>
+          <input id="password" type="password" placeholder="••••••••" required minlength="6" autocomplete="new-password" />
+        </div>
+        <button class="btn btn-primary btn-full" type="submit">Create free account</button>
+      </form>
+
+      <p class="auth-switch">Already have an account? <a href="login.html">Log in</a></p>
+    </div>
+  </main>
+
+</body>
+</html>

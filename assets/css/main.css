@@ -1,0 +1,119 @@
+/* ==========================================================
+   main.css — shared foundation for ALL pages
+   Variables, reset, buttons, navbar, footer, reveal
+   ========================================================== */
+
+:root {
+  --bg: #f6f6fb;
+  --ink: #1d1b2e;
+  --muted: #666582;
+  --primary: #6c5ce7;
+  --primary-dark: #4f3ed1;
+  --accent: #4fa3e3;
+  --pink: #c86dd7;
+  --card-border: rgba(108, 92, 231, 0.16);
+  --radius: 20px;
+  --shadow: 0 20px 60px rgba(76, 60, 180, 0.18);
+  --shadow-soft: 0 10px 30px rgba(108, 92, 231, 0.12);
+  --max-width: 1120px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background:
+    radial-gradient(1000px 500px at 10% -5%, #e9e4ff 0%, transparent 60%),
+    radial-gradient(900px 500px at 95% 10%, #d9efff 0%, transparent 60%),
+    var(--bg);
+  color: var(--ink);
+  line-height: 1.6;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+.container { max-width: var(--max-width); margin: 0 auto; padding: 0 24px; }
+a { text-decoration: none; color: inherit; }
+
+/* ---------- Buttons (reused everywhere) ---------- */
+.btn {
+  display: inline-block;
+  border-radius: 999px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  text-align: center;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(0) scale(0.98); }
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(108, 92, 231, 0.35);
+}
+.btn-primary:hover { box-shadow: 0 12px 32px rgba(108, 92, 231, 0.45); }
+.btn-outline {
+  border-color: rgba(29, 27, 46, 0.12);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  color: var(--ink);
+}
+.btn-small { padding: 9px 20px; font-size: 0.9rem; }
+.btn-large { padding: 14px 32px; font-size: 1rem; }
+.btn-full { width: 100%; padding: 13px; font-size: 1rem; }
+
+.gradient-text {
+  background: linear-gradient(100deg, var(--primary) 10%, var(--accent) 50%, var(--pink) 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------- Navbar (landing + auth pages) ---------- */
+.navbar {
+  position: sticky;
+  top: 12px;
+  z-index: 20;
+  margin: 12px 16px 0;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 8px 32px rgba(30, 20, 80, 0.08);
+  border-radius: 18px;
+  transition: box-shadow 0.25s ease;
+}
+.navbar.scrolled { box-shadow: 0 12px 40px rgba(30, 20, 80, 0.14); }
+.nav-inner { display: flex; align-items: center; justify-content: space-between; height: 68px; }
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; display: block; box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
+.logo-text { font-weight: 800; font-size: 1.3rem; letter-spacing: -0.02em; }
+.nav-links { display: flex; align-items: center; gap: 24px; color: var(--muted); font-weight: 500; }
+.nav-links a:hover { color: var(--ink); }
+.menu-btn { display: none; flex-direction: column; gap: 5px; background: none; border: 0; cursor: pointer; padding: 8px; }
+.menu-btn span { width: 24px; height: 2px; background: var(--ink); border-radius: 2px; display: block; }
+
+/* ---------- Footer ---------- */
+.footer { padding: 48px 0 28px; }
+.footer-grid { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; flex-wrap: wrap; margin-bottom: 24px; }
+.footer-tag { color: var(--muted); margin-top: 8px; }
+.footer-links { display: flex; gap: 22px; flex-wrap: wrap; color: var(--muted); }
+.footer-links a:hover { color: var(--ink); }
+.footer-bottom { border-top: 1px solid var(--card-border); padding-top: 18px; color: var(--muted); font-size: 0.9rem; }
+
+/* ---------- Scroll reveal (added by landing.js) ---------- */
+.reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.7s ease, transform 0.7s ease; }
+.reveal.visible { opacity: 1; transform: none; }
+
+@media (max-width: 900px) {
+  .menu-btn { display: flex; }
+  .nav-links {
+    display: none; position: absolute; top: 74px; left: 12px; right: 12px;
+    background: #fff; flex-direction: column; padding: 20px;
+    border-radius: 16px; border: 1px solid var(--card-border);
+    box-shadow: var(--shadow);
+  }
+  .nav-links.open { display: flex; }
+  .navbar { margin: 8px 8px 0; }
+}
