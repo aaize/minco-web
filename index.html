@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Minco is a safe peer-support space to connect, share, and support each other." />
+  <title>Minco — You're not alone</title>
+  <link rel="icon" href="mincologo.png" type="image/png" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- defer = load JS after HTML is parsed. Good default for beginners. -->
+  <script src="script.js" defer></script>
+</head>
+<body>
+
+  <!-- 1. NAVIGATION -->
+  <!-- header + nav are semantic tags: they describe *meaning*, not just layout -->
+  <header class="navbar" id="navbar">
+    <div class="container nav-inner">
+      <a href="#" class="logo">
+        <img src="mincologo.png" alt="Minco logo" class="logo-img" />
+        <span class="logo-text">Minco</span>
+      </a>
+
+      <nav class="nav-links" id="navLinks">
+        <a href="#about">About</a>
+        <a href="#features">Features</a>
+        <a href="#how">How It Works</a>
+        <a href="#" class="btn btn-small btn-outline">Log in</a>
+        <a href="#" class="btn btn-small btn-primary">Get Started</a>
+      </nav>
+
+      <!-- Hamburger only shows on mobile (see CSS) -->
+      <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- 2. HERO -->
+    <section class="hero" id="about">
+      <div class="container hero-grid">
+        <div class="hero-text">
+          <p class="badge">A safe peer-support space</p>
+          <h1>You're not alone.</h1>
+          <p class="lead">
+            Minco is a calm place to connect with others, share what you're
+            going through, and give and receive support — one conversation at a time.
+          </p>
+          <div class="hero-actions">
+            <a href="#" class="btn btn-primary btn-large">Get Started</a>
+            <a href="#how" class="btn btn-outline btn-large">Learn more</a>
+          </div>
+          <p class="hero-note">Free to join &bull; Kind by design &bull; No pressure to share</p>
+        </div>
+
+        <!-- Visual card: shows what a supportive post could look like.
+             Pure HTML/CSS — no backend needed yet. -->
+        <div class="hero-card">
+          <div class="post-card">
+            <div class="post-header">
+              <span class="avatar">A</span>
+              <div>
+                <p class="post-name">Anonymous member</p>
+                <p class="post-time">2 hours ago</p>
+              </div>
+              <span class="post-tag">Support</span>
+            </div>
+            <p class="post-body">
+              "Today felt heavy, but reading everyone's kind words here helped me breathe a little easier."
+            </p>
+            <div class="post-footer">
+              <span>24 supportive replies</span>
+              <span>Safe space</span>
+            </div>
+          </div>
+
+          <div class="mini-card mini-card-1">You matter here</div>
+          <div class="mini-card mini-card-2">Listened to &bull; Supported</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. FEATURES -->
+    <section class="section" id="features">
+      <div class="container">
+        <p class="eyebrow">What Minco offers</p>
+        <h2>Support that feels human</h2>
+        <p class="section-sub">
+          No medical jargon. Just people who understand, and tools that keep it safe.
+        </p>
+
+        <div class="card-grid">
+          <article class="card">
+            <div class="icon">1</div>
+            <h3>Community discussions</h3>
+            <p>Join gentle, topic-based conversations about stress, sleep, motivation, and everyday life.</p>
+          </article>
+          <article class="card">
+            <div class="icon">2</div>
+            <h3>Peer support</h3>
+            <p>Give and receive encouragement from people with lived experience — not professionals, but peers.</p>
+          </article>
+          <article class="card">
+            <div class="icon">3</div>
+            <h3>Safe space</h3>
+            <p>Clear community guidelines, kind moderation, and simple reporting keep Minco respectful.</p>
+          </article>
+          <article class="card">
+            <div class="icon">4</div>
+            <h3>Anonymous posting</h3>
+            <p>Share openly without using your real name. You control what you reveal and when.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. HOW IT WORKS -->
+    <section class="section section-alt" id="how">
+      <div class="container">
+        <p class="eyebrow">How it works</p>
+        <h2>Four small steps</h2>
+        <p class="section-sub">Designed to feel easy, even on a hard day.</p>
+
+        <ol class="steps">
+          <li>
+            <span class="step-num">1</span>
+            <div>
+              <h3>Create an account</h3>
+              <p>Sign up in under a minute. Choose a display name — it can be anonymous.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-num">2</span>
+            <div>
+              <h3>Connect with the community</h3>
+              <p>Browse supportive topics and find people who get what you're feeling.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-num">3</span>
+            <div>
+              <h3>Share thoughts or experiences</h3>
+              <p>Post when you're ready. There's no pressure — reading quietly is okay too.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-num">4</span>
+            <div>
+              <h3>Receive and provide support</h3>
+              <p>Exchange kind replies, encouragement, and coping ideas that helped others.</p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="cta-box">
+          <h3>Ready when you are.</h3>
+          <p>Join Minco and take the first small step toward feeling less alone.</p>
+          <a href="#" class="btn btn-primary btn-large">Create free account</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 5. FOOTER -->
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div>
+        <a href="#" class="logo">
+          <img src="mincologo.png" alt="Minco logo" class="logo-img" />
+          <span class="logo-text">Minco</span>
+        </a>
+        <p class="footer-tag">A calm peer-support community.</p>
+      </div>
+      <nav class="footer-links">
+        <a href="#about">About</a>
+        <a href="#features">Features</a>
+        <a href="#how">How It Works</a>
+        <a href="#">Log in</a>
+      </nav>
+    </div>
+    <div class="container footer-bottom">
+      <p>&copy; <span id="year">2026</span> Minco. Built with care for learning and support.</p>
+    </div>
+  </footer>
+
+</body>
+</html>
