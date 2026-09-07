@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Create your free Minco account and join a safe peer-support community." />
   <title>Create account — Minco</title>
   <link rel="icon" href="../assets/img/mincologo.png" type="image/png" />
   <link rel="stylesheet" href="../assets/css/main.css" />
@@ -28,35 +29,95 @@
     </div>
   </header>
 
-  <main class="auth-wrap">
-    <div class="auth-card">
-      <div class="auth-logo">
-        <img src="../assets/img/mincologo.png" alt="Minco logo" class="logo-img" />
-        <strong>Minco</strong>
+  <main class="auth-wrap auth-wrap-split">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <div class="auth-card auth-card-split">
+      <!-- Left: reassurance panel -->
+      <aside class="auth-side">
+        <div class="auth-side-inner">
+          <p class="badge"><span class="pulse-dot"></span> Safe peer-support space</p>
+          <h2>You're <span class="gradient-text">not alone.</span></h2>
+          <p class="auth-side-sub">Create a free account in under a minute. Choose any display name — staying anonymous is okay.</p>
+          <ul class="auth-points">
+            <li>
+              <span class="check">✓</span>
+              <div><strong>Judgement-free community</strong><span>Gentle topics on stress, sleep, motivation &amp; everyday life.</span></div>
+            </li>
+            <li>
+              <span class="check">✓</span>
+              <div><strong>Anonymous by default</strong><span>No real name needed. You control what you share.</span></div>
+            </li>
+            <li>
+              <span class="check">✓</span>
+              <div><strong>Kind by design</strong><span>Clear guidelines + caring moderation keep it safe.</span></div>
+            </li>
+          </ul>
+          <div class="auth-side-quote">
+            <p>"Today felt heavy, but everyone's kind words here helped me breathe easier."</p>
+            <span>— Anonymous member · 24 supportive replies</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Right: form -->
+      <div class="auth-main">
+        <div class="auth-logo">
+          <img src="../assets/img/mincologo.png" alt="Minco logo" class="logo-img" />
+          <strong>Minco</strong>
+        </div>
+        <h1>Create your account</h1>
+        <p class="auth-sub">Join 12k+ members supporting each other, one conversation at a time.</p>
+
+        <div class="form-error" id="formError" role="alert"></div>
+
+        <form id="registerForm" novalidate>
+          <div class="field">
+            <label for="name">Display name</label>
+            <input id="name" name="name" type="text" placeholder="e.g. Quiet River" required autocomplete="nickname" maxlength="30" />
+            <small class="hint">2–30 characters. Can be anonymous — never use your real name if you prefer not to.</small>
+          </div>
+
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" placeholder="you@example.com" required autocomplete="email" />
+            <small class="hint">Only used to log you in. Never shown publicly.</small>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="password">Password</label>
+              <div class="password-wrap">
+                <input id="password" name="password" type="password" placeholder="6+ characters" required minlength="6" autocomplete="new-password" />
+                <button type="button" class="pw-toggle" data-toggle="password" aria-label="Show password">Show</button>
+              </div>
+              <div class="strength" aria-hidden="true"><span id="strengthBar"></span></div>
+              <small class="hint" id="strengthLabel">Use 6+ characters with a mix of letters &amp; numbers.</small>
+            </div>
+            <div class="field">
+              <label for="confirm">Confirm password</label>
+              <div class="password-wrap">
+                <input id="confirm" name="confirm" type="password" placeholder="Repeat password" required autocomplete="new-password" />
+                <button type="button" class="pw-toggle" data-toggle="confirm" aria-label="Show password">Show</button>
+              </div>
+            </div>
+          </div>
+
+          <label class="agree">
+            <input type="checkbox" id="agree" required />
+            <span>I agree to the <a href="guidelines.html">safe-space guidelines</a> and understand Minco is peer support, not crisis care.</span>
+          </label>
+
+          <button class="btn btn-primary btn-full btn-glow" type="submit" id="registerBtn">Create free account</button>
+          <p class="secure-note">Free forever · No spam · Leave anytime</p>
+        </form>
+
+        <p class="auth-switch">Already have an account? <a href="login.html">Log in</a></p>
       </div>
-      <h1>Create your account</h1>
-      <p class="auth-sub">Join a kind, judgement-free peer community. Anonymous names welcome.</p>
-
-      <div class="form-error" id="formError"></div>
-
-      <form id="registerForm">
-        <div class="field">
-          <label for="name">Display name</label>
-          <input id="name" type="text" placeholder="e.g. Quiet River" required autocomplete="nickname" />
-        </div>
-        <div class="field">
-          <label for="email">Email</label>
-          <input id="email" type="email" placeholder="you@example.com" required autocomplete="email" />
-        </div>
-        <div class="field">
-          <label for="password">Password (6+ characters)</label>
-          <input id="password" type="password" placeholder="••••••••" required minlength="6" autocomplete="new-password" />
-        </div>
-        <button class="btn btn-primary btn-full" type="submit">Create free account</button>
-      </form>
-
-      <p class="auth-switch">Already have an account? <a href="login.html">Log in</a></p>
     </div>
+
+    <p class="auth-back"><a href="../index.html">← Back to home</a></p>
   </main>
 
 </body>
