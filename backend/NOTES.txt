@@ -29,7 +29,9 @@ FILES (in backend/)
 
 DATABASE TABLES (inside minco.db)
 ---------------------------------
-- users(id, name, email UNIQUE, password_hash, created_at)
+- users(id, name, email UNIQUE, password_hash, created_at, bio, avatar)
+  (bio/avatar added later via ALTER TABLE migration in init_db — old DBs upgrade
+  automatically on boot)
 - sessions(token, user_id, created_at)
 - posts(id, user_id, name, community, tag, text, image, ups, downs, loves, created_at)
 - votes(post_id, user_id, value) .... one row per user per post
@@ -45,8 +47,9 @@ API ENDPOINTS
 - POST /api/register ............ {name, email, password} -> {user, token}
 - POST /api/login ............... {email, password} -> {user, token}
 - GET  /api/me .................. current user (needs token)
+- PUT  /api/me .................. update name/bio/avatar; renames past posts+replies
 - POST /api/logout .............. invalidate token (needs token)
-- GET  /api/posts ............... feed (?sort=hot|new|top &community=all|calm|sleep|stress|wins &q=...)
+- GET  /api/posts ............... feed (?sort &community &q, plus &mine=1 for own posts)
 - POST /api/posts ............... new post {text, community, image?} (needs token)
 - POST /api/posts/<id>/vote .... {value: 1, 0 or -1} (needs token)
 - POST /api/posts/<id>/love .... toggle support (needs token)
@@ -100,6 +103,9 @@ LIMITS (free tier)
 
 IDEAS FOR LATER
 ---------------
+- Profile page exists (pages/profile.html): avatar photo upload (auto-shrunk to
+  256px), editable name/bio, stats (posts/karma/supported), tabs
+  (Posts/Supported/About). Reach it via the user pill or sidebar on the feed.
 - Switch SQLite -> hosted Postgres when data outgrows one file.
 - Plug a real AI provider into chat_reply() in app.py (keep crisis check first,
   never expose the API key to the frontend).

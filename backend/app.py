@@ -92,6 +92,12 @@ def init_db():
         );
         """
     )
+    # Migration for databases created before profiles existed
+    cols = {r[1] for r in db.execute("PRAGMA table_info(users)").fetchall()}
+    if "bio" not in cols:
+        db.execute("ALTER TABLE users ADD COLUMN bio TEXT NOT NULL DEFAULT ''")
+    if "avatar" not in cols:
+        db.execute("ALTER TABLE users ADD COLUMN avatar TEXT NOT NULL DEFAULT ''")
     db.commit()
 
     # Seed demo user + starter posts (mirrors the old localStorage demo)
@@ -134,7 +140,15 @@ def init_db():
 
 
 def public_user(row):
-    return {"id": row["id"], "name": row["name"], "email": row["email"]}
+    keys = row.keys()
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "email": row["email"],
+        "bio": row["bio"] if "bio" in keys else "",
+        "avatar": row["avatar"] if "avatar" in keys else "",
+        "joined": row["created_at"],
+    }
 
 
 def auth_user(optional=False):
@@ -196,6 +210,7 @@ def post_to_dict(p, viewer_id=None):
         "id": p["id"], "name": p["name"], "community": p["community"], "tag": p["tag"],
         "text": p["text"], "image": p["image"], "ups": p["ups"], "downs": p["downs"],
         "loves": p["loves"], "userVote": user_vote, "loved": loved,
+        "mine": bool(viewer_id) and p["user_id"] == viewer_id,
         "time": time_ago(p["created_at"]), "ts": p["created_at"], "replies": replies,
     }
 
@@ -335,6 +350,40 @@ def me():
     return jsonify({"user": public_user(g.user)})
 
 
+@app.put("/api/me")
+@require_auth
+def update_me():
+    data = request.get_json(force=True, silent=True) or {}
+    updates = {}
+    if "name" in data:
+        name = (data.get("name") or "").strip()
+        if not (2 <= len(name) <= 30):
+            return jsonify({"error": "Display name must be 2–30 characters."}), 400
+        updates["name"] = name
+    if "bio" in data:
+        updates["bio"] = (data.get("bio") or "").strip()[:150]
+    if "avatar" in data:
+        avatar = data.get("avatar")
+        if avatar:
+            if not isinstance(avatar, str) or not avatar.startswith("data:image/"):
+                return jsonify({"error": "Avatar must be an image."}), 400
+            if len(avatar) > 700_000:
+                return jsonify({"error": "Avatar image too large — pick a smaller photo."}), 400
+            updates["avatar"] = avatar
+        else:
+            updates["avatar"] = ""
+    if updates:
+        db = get_db()
+        sets = ", ".join(f"{k} = ?" for k in updates)
+        db.execute(f"UPDATE users SET {sets} WHERE id = ?", (*updates.values(), g.user["id"]))
+        if "name" in updates:  # keep past posts/replies showing the new name
+            db.execute("UPDATE posts SET name = ? WHERE user_id = ?", (updates["name"], g.user["id"]))
+            db.execute("UPDATE replies SET name = ? WHERE user_id = ?", (updates["name"], g.user["id"]))
+        db.commit()
+        g.user = db.execute("SELECT * FROM users WHERE id = ?", (g.user["id"],)).fetchone()
+    return jsonify({"user": public_user(g.user)})
+
+
 @app.post("/api/logout")
 @require_auth
 def logout():
@@ -351,9 +400,14 @@ def list_posts():
     community = (request.args.get("community") or "all").lower()
     q = (request.args.get("q") or "").lower().strip()
     sort = (request.args.get("sort") or "hot").lower()
+    mine_only = request.args.get("mine") == "1"
+    if mine_only and not viewer_id:
+        return jsonify({"error": "Login required"}), 401
     db = get_db()
     rows = db.execute("SELECT * FROM posts ORDER BY created_at DESC LIMIT 200").fetchall()
     posts = [post_to_dict(p, viewer_id) for p in rows]
+    if mine_only:
+        posts = [p for p in posts if p["mine"]]
     if community != "all":
         posts = [p for p in posts if p["community"] == community]
     if q:

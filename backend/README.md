@@ -11,9 +11,10 @@ adds real shared accounts and posts when it's running.
 | GET | `/api/health` | – | Health check |
 | POST | `/api/register` | – | `{name, email, password}` → `{user, token}` |
 | POST | `/api/login` | – | `{email, password}` → `{user, token}` |
-| GET | `/api/me` | Bearer | Current user |
+| GET | `/api/me` | Bearer | Current user (incl. bio, avatar, joined) |
+| PUT | `/api/me` | Bearer | Update profile: `{name, bio, avatar}` (avatar = image dataURL or "") |
 | POST | `/api/logout` | Bearer | Invalidate token |
-| GET | `/api/posts?sort=hot&community=all&q=` | optional | Feed |
+| GET | `/api/posts?sort=hot&community=all&q=` | optional | Feed (`&mine=1` = only my posts, needs login) |
 | POST | `/api/posts` | Bearer | `{text, community, image?}` |
 | POST | `/api/posts/<id>/vote` | Bearer | `{value: 1\|0\|-1}` |
 | POST | `/api/posts/<id>/love` | Bearer | Toggle support |

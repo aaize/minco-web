@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Your Minco profile — display name, bio, photo, posts and support." />
+  <title>My profile — Minco</title>
+  <link rel="icon" href="../assets/img/mincologo.png" type="image/png" />
+  <link rel="stylesheet" href="../assets/css/main.css" />
+  <link rel="stylesheet" href="../assets/css/profile.css" />
+  <link rel="stylesheet" href="../assets/css/chat.css" />
+  <script src="../assets/js/main.js" defer></script>
+  <script src="../assets/js/api.js" defer></script>
+  <script src="../assets/js/profile.js" defer></script>
+  <script src="../assets/js/chat.js" defer></script>
+</head>
+<body>
+
+  <header class="navbar" id="navbar">
+    <div class="container nav-inner">
+      <a href="home.html" class="logo">
+        <img src="../assets/img/mincologo.png" alt="Minco logo" class="logo-img" />
+        <span class="logo-text">Minco</span>
+      </a>
+      <nav class="nav-links" id="navLinks">
+        <a href="home.html">User page</a>
+        <a href="guidelines.html">Safe space</a>
+        <a href="games.html">Take a break</a>
+        <a href="profile.html" class="btn btn-small btn-primary">Profile</a>
+      </nav>
+      <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="back-bar"><a href="home.html">← Back to feed</a></div>
+
+  <main class="profile-wrap">
+    <!-- Header card -->
+    <section class="profile-head">
+      <div class="profile-ava-ring">
+        <span id="profileAvatar"></span>
+      </div>
+      <div class="profile-id">
+        <div class="profile-name-row">
+          <h1 id="profileName">Member</h1>
+          <button class="btn btn-small btn-outline" id="editBtn">Edit profile</button>
+        </div>
+        <div class="profile-stats">
+          <div><strong id="statPosts">0</strong><span>posts</span></div>
+          <div><strong id="statKarma">0</strong><span>karma</span></div>
+          <div><strong id="statSupported">0</strong><span>supported</span></div>
+        </div>
+        <p class="profile-bio" id="profileBio"></p>
+        <p class="profile-meta" id="profileMeta"></p>
+      </div>
+    </section>
+
+    <!-- Edit panel (hidden until Edit profile) -->
+    <section class="edit-panel hidden" id="editPanel">
+      <h2>Edit profile</h2>
+      <div class="form-error" id="formError" role="alert"></div>
+      <div class="edit-grid">
+        <div class="edit-ava">
+          <span id="editAvatarPreview"></span>
+          <div class="edit-ava-btns">
+            <label class="btn btn-small btn-outline" for="avatarInput">Change photo</label>
+            <input type="file" id="avatarInput" accept="image/*" hidden />
+            <button class="link-btn" id="removeAvatar" type="button">Remove</button>
+          </div>
+        </div>
+        <div class="edit-fields">
+          <div class="field">
+            <label for="editName">Display name</label>
+            <input id="editName" type="text" maxlength="30" autocomplete="nickname" />
+          </div>
+          <div class="field">
+            <label for="editBio">Bio <small>(<span id="bioCount">0</span>/150)</small></label>
+            <textarea id="editBio" maxlength="150" rows="3" placeholder="A line or two about you…"></textarea>
+          </div>
+          <div class="edit-actions">
+            <button class="btn btn-small btn-outline" id="cancelEdit" type="button">Cancel</button>
+            <button class="btn btn-small btn-primary" id="saveEdit" type="button">Save changes</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tabs -->
+    <div class="profile-tabs" id="profileTabs">
+      <button class="active" data-tab="posts">Posts</button>
+      <button data-tab="supported">Supported</button>
+      <button data-tab="about">About</button>
+    </div>
+
+    <section id="tabContent" class="tab-content"></section>
+
+    <div class="profile-foot">
+      <button class="btn btn-small btn-outline" id="shareBtn" type="button">Copy profile link</button>
+      <button class="btn-logout" id="logoutBtn" type="button">Log out</button>
+    </div>
+  </main>
+
+</body>
+</html>
