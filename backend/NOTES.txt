@@ -1,0 +1,106 @@
+MINCO BACKEND — NOTES
+======================
+Written: Sep 2026. Live at: https://aaize09.pythonanywhere.com
+
+WHAT IT IS
+---------
+A small Python web server (Flask + SQLite) that powers the Minco site:
+real user accounts, a shared feed, and the helper-chat endpoint. It also
+serves the frontend pages themselves, so site + API live on one URL.
+
+STACK
+-----
+- Flask (web framework) + Flask-Cors
+- SQLite via Python's built-in sqlite3 module (no ORM)
+- gunicorn (production server; used by Render-style hosts, not PA)
+- Passwords hashed with Werkzeug scrypt — never stored in plain text
+- Login sessions = random tokens stored in the `sessions` table,
+  sent as `Authorization: Bearer <token>` headers
+
+FILES (in backend/)
+-------------------
+- app.py ........................ the whole backend (routes + database + chat rules)
+- requirements.txt .............. Flask, Flask-Cors, gunicorn
+- minco.db ...................... THE DATABASE (auto-created on first run; git-ignored)
+- .env.example .................. optional config template (PORT, HOST, keys)
+- pythonanywhere_wsgi_example.py  copy-paste snippet for the PA WSGI file
+- README.md ..................... setup + deploy instructions
+- NOTES.txt ..................... this file
+
+DATABASE TABLES (inside minco.db)
+---------------------------------
+- users(id, name, email UNIQUE, password_hash, created_at)
+- sessions(token, user_id, created_at)
+- posts(id, user_id, name, community, tag, text, image, ups, downs, loves, created_at)
+- votes(post_id, user_id, value) .... one row per user per post
+- loves(post_id, user_id) ........... one row per support given
+- replies(id, post_id, user_id, name, text, created_at)
+
+Seeded automatically on first start: demo user demo@minco.app / minco123
+plus 4 starter posts and 1 reply. Delete minco.db anytime to reset all data.
+
+API ENDPOINTS
+-------------
+- GET  /api/health .............. health check (frontend uses this to detect backend)
+- POST /api/register ............ {name, email, password} -> {user, token}
+- POST /api/login ............... {email, password} -> {user, token}
+- GET  /api/me .................. current user (needs token)
+- POST /api/logout .............. invalidate token (needs token)
+- GET  /api/posts ............... feed (?sort=hot|new|top &community=all|calm|sleep|stress|wins &q=...)
+- POST /api/posts ............... new post {text, community, image?} (needs token)
+- POST /api/posts/<id>/vote .... {value: 1, 0 or -1} (needs token)
+- POST /api/posts/<id>/love .... toggle support (needs token)
+- POST /api/posts/<id>/replies . {text} (needs token)
+- POST /api/chat ................ {message} -> {reply, crisis} (offline rules for now)
+
+HOW THE FRONTEND CONNECTS
+-------------------------
+- assets/js/api.js talks to the same server that served the page by default,
+  checks /api/health, and remembers a working server. Backend up -> real API.
+  Backend down -> pages silently fall back to localStorage demo mode.
+- auth.js tries /api/register and /api/login first, falls back offline.
+- home.js pulls the feed from /api/posts and syncs votes/loves/replies/posts.
+- chat.js tries /api/chat first, falls back to its built-in offline answers.
+- Override the server manually: localStorage.setItem("minco_api_base", "http://...")
+
+RUN LOCALLY (on the Mac)
+------------------------
+  cd Minco-Web/backend
+  source .venv/bin/activate
+  python app.py
+Open http://127.0.0.1:5000
+
+DEPLOYED (PythonAnywhere, free, no card)
+---------------------------------------
+- Site: https://aaize09.pythonanywhere.com
+- Web app uses Manual config, Python 3.10, virtualenv /home/aaize09/.virtualenvs/minco
+- WSGI file: /var/www/aaize09_pythonanywhere_com_wsgi.py (imports app from backend/)
+- Source code dir: /home/aaize09/minco-web/backend
+- Update code: cd ~/minco-web && git pull, then Reload on the Web tab.
+- minco.db persists on PA disk across reloads (unlike Render free).
+
+LESSONS FROM DEPLOYING (things that bit us)
+-------------------------------------------
+1. Virtualenv path must be the VENV (/home/aaize09/.virtualenvs/minco),
+   not the repo folder. The dot in .virtualenvs matters.
+2. "Something went wrong" = generic page; the real error is in the Error log
+   on the Web tab — always check there first.
+3. WARNING: Package(s) not found: flask -> pip install -r requirements.txt
+   had never run inside the venv. Fix: workon minco, then pip install.
+4. Linux paths are case-sensitive: minco-web != Minco-Web. The WSGI sys.path
+   and Source code dir must match the real folder name exactly.
+5. Never run `python app.py` on PythonAnywhere — just press Reload.
+6. render.yaml exists for Render hosting, but Render signup asks for a card,
+   so PythonAnywhere is the current home.
+
+LIMITS (free tier)
+------------------
+- 1 web app, 512 MB disk, ~100 CPU-seconds/day. Fine for a demo.
+- Log in occasionally; PA emails before a free app needs extending.
+
+IDEAS FOR LATER
+---------------
+- Switch SQLite -> hosted Postgres when data outgrows one file.
+- Plug a real AI provider into chat_reply() in app.py (keep crisis check first,
+  never expose the API key to the frontend).
+- Custom domain (needs a paid PA plan).

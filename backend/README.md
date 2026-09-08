@@ -50,7 +50,34 @@ demo user (`demo@minco.app` / `minco123`) and 4 starter posts.
 
 Press `Ctrl+C` to stop. Deactivate the venv with `deactivate`.
 
-## Going online (Render, free)
+## Going online with NO credit card (PythonAnywhere, free)
+
+Render asks for a card, so use PythonAnywhere instead: its free Beginner
+account needs no card and runs Flask. Your site lives at
+`https://YOURUSERNAME.pythonanywhere.com` (frontend + API, same server —
+no extra config needed, and the database file persists, unlike Render free).
+
+1. **Push your code to GitHub** (commit + push `Minco-Web/`).
+2. **Sign up** at pythonanywhere.com → Beginner account ($0, no card) → confirm email.
+3. **Get your code**: Dashboard → Consoles → Bash, then:
+   ```bash
+   git clone https://github.com/YOU/Minco-Web.git
+   cd Minco-Web/backend
+   mkvirtualenv --python=/usr/bin/python3.10 minco
+   pip install -r requirements.txt
+   ```
+4. **Create the web app**: Web tab → Add a new web app → **Manual
+   configuration** → pick the same Python version (e.g. 3.10).
+5. **Point it at Minco**: in the app's settings set Virtualenv to
+   `/home/YOURUSERNAME/.virtualenvs/minco`, open the WSGI configuration file,
+   replace its contents with `backend/pythonanywhere_wsgi_example.py`
+   (swap in your username), save.
+6. **Reload** (green button) and open `https://YOURUSERNAME.pythonanywhere.com`.
+
+Free limits: 1 app, 512 MB disk, ~100 CPU-seconds/day — plenty for a demo.
+Log in now and then; PA emails you if the free app ever needs extending.
+
+## Going online (Render, free but card required at signup)
 
 The repo includes `render.yaml`, so deployment is a Blueprint:
 

@@ -485,6 +485,7 @@ def chat():
 
 # ---------------- serve frontend (one-command demo) ----------------
 @app.get("/")
+@app.get("/index.html")  # logo links point at ../index.html — serve it too
 def serve_index():
     return send_from_directory(WEB_DIR, "index.html")
 
