@@ -1,0 +1,93 @@
+MINCO-WEB — CONVERSATION & PROJECT MEMORY
+===========================================
+Purpose: if context is ever lost, point the AI at this file first.
+RULE FOR THE AI: every time you make updates to this project, append a dated
+entry under HISTORY and update the CURRENT STATE section in this same file.
+
+PROJECT
+-------
+- Name: Minco-Web — a calm, safe peer-support community ("You're not alone").
+- Type: full-stack learning project. Static frontend + Flask backend.
+- Local path: /Users/aaize/FullStackProjects/Minco-Web (git repo, branch main)
+- Live site: https://aaize09.pythonanywhere.com (free, no card)
+- Demo login: demo@minco.app / minco123
+- Human owner: aaize (PythonAnywhere user: aaize09). AI helper: Muse Spark via OpenCode.
+
+STACK
+-----
+- Frontend: plain HTML/CSS/JS, no framework. Design tokens in assets/css/main.css.
+- Backend: Flask + SQLite (stdlib sqlite3, no ORM), Flask-Cors, gunicorn (prod).
+- Auth: token sessions (Authorization: Bearer), passwords hashed (scrypt).
+- Frontend pattern: backend-first with silent localStorage fallback (offline demo
+  mode). Key file: assets/js/api.js (auto-detects backend via /api/health,
+  same-origin default, localStorage "minco_api_base" override).
+
+CURRENT STATE (as of 2026-09-08 — everything below is built, tested, live)
+---------------------------------------------------------------------------
+Pages: index.html (landing), pages/register.html, pages/login.html,
+  pages/home.html (feed), pages/guidelines.html, pages/games.html (breathing,
+  memory match, tic-tac-toe), pages/profile.html (Instagram-style).
+Widgets: Minco Helper chat (rule-based Wellness Q&A) on home/guidelines/games/profile.
+Backend (backend/app.py): /api/health, register, login, me (GET+PUT), logout,
+  posts CRUD + vote/love/replies, ?mine=1 filter, /api/chat (offline rules).
+  Serves / and /index.html + /pages/ + /assets/ itself.
+Database: backend/minco.db (git-ignored), users/sessions/posts/votes/loves/replies.
+  users has bio + avatar columns (auto-migrate on boot). Demo seed: 1 user, 4 posts.
+Deploys: PythonAnywhere manual app, Python 3.10, venv /home/aaize09/.virtualenvs/minco,
+  WSGI /var/www/aaize09_pythonanywhere_com_wsgi.py, source /home/aaize09/minco-web/backend.
+  Update flow: git push (Mac) -> cd ~/minco-web && git pull (PA) -> Reload.
+Docs: README.md, backend/README.md, backend/NOTES.txt (backend deep notes), this file.
+
+HISTORY (append new entries at the bottom, newest last)
+-------------------------------------------------------
+1. 2026-09-06 — Landing page built (hero, 3D tilt card, features, steps, CTA).
+2. 2026-09-06 — Effects added to landing page.
+3. 2026-09-06 — User/feed page built (communities, composer, voting, replies, search).
+4. 2026-09-06 — Mini games page (breathing, memory match, tic-tac-toe).
+5. 2026-09-07 — Registration page rebuilt: split layout (brand panel + form),
+   confirm password, strength meter, show/hide toggles, guidelines checkbox.
+   (commit "Registration")
+6. 2026-09-07 — AI chat question -> built OFFLINE rule-based Wellness Q&A widget
+   (floating button, quick prompts, crisis-first guardrails, localStorage history).
+   Choice was: supportive Wellness Q&A, offline mock, chat-widget placement.
+7. 2026-09-07/08 — Backend built: Flask + SQLite (auth/posts/chat), api.js client,
+   frontend wired backend-first with offline fallback. All endpoints curl-tested.
+   (commit "Backend")
+8. 2026-09-08 — Production-ready: gunicorn, PORT/HOST env, init_db at import,
+   api.js same-origin default, render.yaml. Gunicorn-tested locally on :5100.
+9. 2026-09-08 — Render signup demanded a card -> switched to PythonAnywhere
+   (free Beginner, no card). Added pythonanywhere_wsgi_example.py + PA docs.
+10. 2026-09-08 — Deploy debugging on PA: (a) Virtualenv field must be the VENV
+    path (/home/aaize09/.virtualenvs/minco), not the repo; (b) WSGI sys.path and
+    Source code dir must match real folder case (minco-web, lowercase);
+    (c) Flask wasn't installed in venv -> pip install -r requirements.txt;
+    (d) never run `python app.py` on PA — just press Reload. Site went live.
+11. 2026-09-08 — Logo clicks 404'd online (../index.html had no route; worked on
+    file:// only). Fixed server-side: app.py now serves /index.html as well.
+12. 2026-09-08 — Profile page built (Instagram-style): avatar photo upload
+    (256px), editable name/bio, posts/karma/supported stats, Posts/Supported/
+    About tabs. Backend: bio/avatar columns + PUT /api/me (renames propagate
+    to posts/replies) + ?mine=1 + per-post "mine" flag. (commit "User Profile Page")
+13. 2026-09-08 — Local-test mysteries solved: (a) an old dev server survived
+    because kill patterns used wrong case (Minco-Web vs minco-web) and bare
+    `Python app.py` argv has no path — kill by PID; (b) the survivor's
+    Werkzeug reloader HOT-RELOADED the profile edits mid-test (verify which
+    server answers before trusting test results); (c) macOS Control Center
+    (AirPlay) listens on :5000 and returns 403 — test Flask on :5100 instead.
+14. 2026-09-08 — This memory file created per user request, with the rule that
+    the AI updates it on every future change.
+
+OPEN IDEAS (not started)
+------------------------
+- Hosted Postgres when SQLite outgrows one file.
+- Real AI provider inside chat_reply() (crisis check stays first, key server-side).
+- Custom domain (needs paid PA plan).
+- Render as alternative host if a card becomes available (render.yaml ready).
+
+HOW TO RESUME (for a future AI session)
+---------------------------------------
+1. Read this file + backend/NOTES.txt first.
+2. Check `git log --oneline -5` and `git status --short` for drift.
+3. Confirm backend location: local minco.db vs live PA database are SEPARATE.
+4. After making changes: update CURRENT STATE + append HISTORY here, and mirror
+   backend details in backend/NOTES.txt.
