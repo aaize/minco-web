@@ -1,7 +1,7 @@
 // ==========================================================
-// auth.js — frontend-only auth (no backend yet)
-// Default demo account + localStorage session.
-// Later: replace this with Flask fetch() calls.
+// auth.js — backend-first auth with localStorage fallback.
+// Backend: POST /api/register, POST /api/login (token saved).
+// Offline: original demo users in localStorage still work.
 // ==========================================================
 
 const DEMO_USER = {
@@ -13,7 +13,7 @@ const DEMO_USER = {
 const SESSION_KEY = "minco_session";
 const USERS_KEY = "minco_users";
 
-// Seed demo user once so login works on first load
+// ---------- local fallback store ----------
 function getUsers() {
   try {
     return JSON.parse(localStorage.getItem(USERS_KEY)) || [];
@@ -39,10 +39,29 @@ function getSession() {
   }
 }
 
-// If already logged in, skip auth pages
-if (getSession()) {
-  window.location.replace("home.html");
+const api = () => window.MincoAPI;
+async function backendOn() {
+  try {
+    return api() ? await api().available() : false;
+  } catch {
+    return false;
+  }
 }
+
+// If already logged in (backend token valid OR local session), skip auth pages
+(async () => {
+  if (await backendOn()) {
+    try {
+      const { user } = await api().req("/api/me", { auth: true });
+      setSession(user);
+      window.location.replace("home.html");
+      return;
+    } catch {
+      /* token invalid — fall through to local check */
+    }
+  }
+  if (getSession()) window.location.replace("home.html");
+})();
 
 function showError(msg) {
   const el = document.getElementById("formError");
@@ -111,27 +130,61 @@ if (pwInput && strengthBar) {
   });
 }
 
+function localLogin(email, password) {
+  return getUsers().find((u) => u.email.toLowerCase() === email && u.password === password) || null;
+}
+
 // --- Login form ---
 const loginForm = document.getElementById("loginForm");
 if (loginForm) {
-  // One-click demo fill
   document.getElementById("fillDemo")?.addEventListener("click", () => {
     document.getElementById("email").value = DEMO_USER.email;
     document.getElementById("password").value = DEMO_USER.password;
     clearError();
   });
 
-  loginForm.addEventListener("submit", (e) => {
+  loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     clearError();
     const email = document.getElementById("email").value.trim().toLowerCase();
     const password = document.getElementById("password").value;
+    const btn = loginForm.querySelector('button[type="submit"]');
 
     if (!isValidEmail(email)) return showError("Please enter a valid email address.");
     if (!password) return showError("Please enter your password.");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Logging in…";
+    }
 
-    const user = getUsers().find((u) => u.email.toLowerCase() === email && u.password === password);
+    // 1) Try backend
+    if (await backendOn()) {
+      try {
+        const { user, token } = await api().req("/api/login", {
+          method: "POST",
+          body: { email, password },
+        });
+        api().setToken(token);
+        setSession(user);
+        window.location.replace("home.html");
+        return;
+      } catch (err) {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Log in";
+        }
+        // 401 = wrong credentials (don't silently fall back); network error = fall back
+        if (/didn't match|Invalid|required/i.test(err.message)) return showError(err.message);
+      }
+    }
+
+    // 2) Offline fallback
+    const user = localLogin(email, password);
     if (!user) {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Log in";
+      }
       showError("Hmm, that email/password didn't match. Try the demo login below.");
       return;
     }
@@ -157,7 +210,7 @@ if (registerForm) {
     e.target.classList.remove("invalid");
   });
 
-  registerForm.addEventListener("submit", (e) => {
+  registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     clearError();
     const nameEl = document.getElementById("name");
@@ -175,20 +228,45 @@ if (registerForm) {
       showError(msg);
       el?.classList.add("invalid");
       el?.focus();
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Create free account";
+      }
     };
 
     if (name.length < 2 || name.length > 30) return fail(nameEl, "Please enter a display name (2–30 characters).");
     if (!isValidEmail(email)) return fail(emailEl, "Please enter a valid email address.");
     if (password.length < 6) return fail(pwEl, "Password needs at least 6 characters.");
     if (confirmInput && password !== confirm) return fail(confirmInput, "Passwords don't match yet — please check both fields.");
-    if (agreeEl && !agreeEl.checked) return showError("Please accept the safe-space guidelines to continue.");
-    if (getUsers().some((u) => u.email.toLowerCase() === email)) {
-      return fail(emailEl, "That email is already registered. Try logging in.");
-    }
+    if (agreeEl && !agreeEl.checked) return fail(null, "Please accept the safe-space guidelines to continue.");
 
     if (btn) {
       btn.disabled = true;
       btn.textContent = "Creating your account…";
+    }
+
+    // 1) Try backend
+    if (await backendOn()) {
+      try {
+        const { user, token } = await api().req("/api/register", {
+          method: "POST",
+          body: { name, email, password },
+        });
+        api().setToken(token);
+        setSession(user);
+        window.location.replace("home.html");
+        return;
+      } catch (err) {
+        if (/already registered|valid email|Display name|Password/i.test(err.message)) {
+          return fail(emailEl, err.message);
+        }
+        // else: network issue → fall through to offline mode
+      }
+    }
+
+    // 2) Offline fallback
+    if (getUsers().some((u) => u.email.toLowerCase() === email)) {
+      return fail(emailEl, "That email is already registered. Try logging in.");
     }
     const user = { name, email, password };
     saveUsers([...getUsers(), user]);

@@ -1,8 +1,7 @@
 // ==========================================================
 // home.js — User page: Instagram visuals × Reddit mechanics
-// Concepts: localStorage model, voting, threaded replies,
-// image upload (downscaled), sorting, filtering, lightbox
-// Later this same shape becomes your Flask/SQL tables.
+// Backend-first (Flask /api/…) with localStorage fallback,
+// so the feed works offline and syncs when the backend runs.
 // ==========================================================
 
 const SESSION_KEY = "minco_session";
@@ -13,6 +12,44 @@ const session = (() => {
   catch { return null; }
 })();
 if (!session) window.location.replace("login.html");
+
+// ---------- backend (optional, graceful fallback) ----------
+const API = () => window.MincoAPI;
+let useBackend = false;
+
+async function initBackend() {
+  try {
+    if (!API() || !API().getToken()) return false;
+    if (!(await API().available())) return false;
+    await API().req("/api/me", { auth: true });
+    useBackend = true;
+    await pullFromBackend();
+  } catch {
+    useBackend = false;
+  }
+  return useBackend;
+}
+
+async function pullFromBackend() {
+  const { posts } = await API().req(
+    `/api/posts?sort=${activeSort}&community=${activeCommunity}`, { auth: true }
+  );
+  // Server shape already matches the local model
+  savePosts(posts);
+  renderFeed();
+}
+// Fire-and-forget mutation helper: run backend call, then refresh that post
+async function syncMutation(promise) {
+  if (!useBackend) return;
+  try {
+    const { post } = await promise;
+    const posts = getPosts().map((p) => (p.id === post.id ? post : p));
+    savePosts(posts);
+    renderFeed();
+  } catch {
+    /* keep local state on backend error */
+  }
+}
 
 let activeSort = "hot";       // hot | new | top
 let activeCommunity = "all";  // all | calm | sleep | stress | wins
@@ -275,12 +312,21 @@ document.getElementById("feed").addEventListener("click", (e) => {
     }
     savePosts(posts);
     renderFeed();
+    if (useBackend && typeof post.id === "number" && post.id < 1e12) {
+      // Real backend id (local-only posts use Date.now()) → sync vote
+      syncMutation(API().req(`/api/posts/${post.id}/vote`, {
+        method: "POST", auth: true, body: { value: post.userVote },
+      }));
+    }
   }
   if (act === "love") {
     post.loved = !post.loved;
     post.loves += post.loved ? 1 : -1;
     savePosts(posts);
     renderFeed();
+    if (useBackend && typeof post.id === "number" && post.id < 1e12) {
+      syncMutation(API().req(`/api/posts/${post.id}/love`, { method: "POST", auth: true }));
+    }
     if (post.loved) toast("Support sent — kindness counts double here.");
   }
   if (act === "toggle-replies") {
@@ -306,6 +352,11 @@ document.getElementById("feed").addEventListener("submit", (e) => {
   post.replies.push({ id: Date.now(), name: session.name, time: "Just now", text: text.slice(0, 200) });
   savePosts(posts);
   renderFeed();
+  if (typeof post.id === "number" && post.id < 1e12 && useBackend) {
+    syncMutation(API().req(`/api/posts/${post.id}/replies`, {
+      method: "POST", auth: true, body: { text },
+    }));
+  }
   toast("Reply posted — thank you for showing up.");
 });
 
@@ -331,11 +382,32 @@ document.getElementById("removeImg").addEventListener("click", () => {
   document.getElementById("imgPreviewWrap").classList.add("hidden");
 });
 
-document.getElementById("postBtn").addEventListener("click", () => {
+document.getElementById("postBtn").addEventListener("click", async () => {
   const text = box.value.trim();
   if (!text && !pendingImage) {
     toast("Write something kind or add an image first.");
     return;
+  }
+  const community = document.getElementById("composerCommunity").value;
+  // Backend first (real shared post), local fallback otherwise
+  if (useBackend) {
+    try {
+      const { post } = await API().req("/api/posts", {
+        method: "POST", auth: true, body: { text, community, image: pendingImage },
+      });
+      const posts = getPosts();
+      posts.unshift(post);
+      savePosts(posts);
+      box.value = "";
+      count.textContent = "0/280";
+      pendingImage = null;
+      document.getElementById("imgPreviewWrap").classList.add("hidden");
+      renderFeed();
+      toast("Shared with your community.");
+      return;
+    } catch (err) {
+      toast(err.message || "Backend unreachable — saved on this device only.");
+    }
   }
   const posts = getPosts();
   posts.unshift({
@@ -421,7 +493,11 @@ document.getElementById("lightboxClose").addEventListener("click", () =>
 document.getElementById("lightbox").addEventListener("click", (e) => {
   if (e.target.id === "lightbox") e.target.classList.add("hidden");
 });
-document.getElementById("logoutBtn").addEventListener("click", () => {
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  try {
+    if (useBackend) await API().req("/api/logout", { method: "POST", auth: true });
+  } catch {}
+  API()?.setToken(null);
   localStorage.removeItem(SESSION_KEY);
   window.location.replace("login.html");
 });
@@ -429,3 +505,4 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
 // init
 renderUser();
 renderFeed();
+initBackend().catch(() => {});

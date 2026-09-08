@@ -1,0 +1,11 @@
+# Render one-click deploy: https://dashboard.render.com → New → Blueprint →
+# point at your repo. Free tier works; see backend/README.md for caveats.
+services:
+  - type: web
+    name: minco-web
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn --chdir backend app:app --bind 0.0.0.0:$PORT --workers 2
+    envVars:
+      - key: RENDER
+        value: "1"
