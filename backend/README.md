@@ -19,6 +19,10 @@ adds real shared accounts and posts when it's running.
 | POST | `/api/posts/<id>/vote` | Bearer | `{value: 1\|0\|-1}` |
 | POST | `/api/posts/<id>/love` | Bearer | Toggle support |
 | POST | `/api/posts/<id>/replies` | Bearer | `{text}` |
+| GET | `/api/meetings` | optional | Awareness meetings, soonest first |
+| POST | `/api/meetings` | Bearer | `{title, description, link, topic, starts_at, duration_min}` |
+| POST | `/api/meetings/<id>/rsvp` | Bearer | Toggle "I'm in" |
+| DELETE | `/api/meetings/<id>` | Bearer | Organiser removes own meeting |
 | POST | `/api/chat` | – | `{message}` → `{reply, crisis}` (offline rules; plug an LLM here later) |
 
 It also serves the site itself: `/` → `index.html`, `/pages/…`, `/assets/…`.

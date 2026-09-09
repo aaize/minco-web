@@ -26,7 +26,8 @@ CURRENT STATE (as of 2026-09-08 — everything below is built, tested, live)
 ---------------------------------------------------------------------------
 Pages: index.html (landing), pages/register.html, pages/login.html,
   pages/home.html (feed), pages/guidelines.html, pages/games.html (breathing,
-  memory match, tic-tac-toe), pages/profile.html (Instagram-style).
+  memory match, tic-tac-toe), pages/profile.html (Instagram-style),
+  pages/meetings.html (awareness meetings board: host/join/RSVP).
 Widgets: Minco Helper chat (rule-based Wellness Q&A) on home/guidelines/games/profile.
 Backend (backend/app.py): /api/health, register, login, me (GET+PUT), logout,
   posts CRUD + vote/love/replies, ?mine=1 filter, /api/chat (offline rules).
@@ -76,6 +77,16 @@ HISTORY (append new entries at the bottom, newest last)
     (AirPlay) listens on :5000 and returns 403 — test Flask on :5100 instead.
 14. 2026-09-08 — This memory file created per user request, with the rule that
     the AI updates it on every future change.
+15. 2026-09-08 — 3D showcase page (showcase.html/css/js + landing links)
+    built then fully REMOVED at user request ("undo anything about portfolio").
+    Files deleted, index.html links reverted. Nothing of it remains.
+16. 2026-09-08 — Awareness meetings board: users post online meetings (title,
+    topic, future date/time, length, video link, agenda + guidelines checkbox),
+    others Join via link and RSVP ("I'm in" toggle with count), organisers can
+    remove. Upcoming/Past split with live countdowns, re-renders every minute.
+    Backend: meetings + meeting_rsvps tables, GET/POST /api/meetings,
+    POST rsvp, owner-only DELETE — all curl-tested (validation, 403, toggle).
+    Page linked from feed tabs + sidebar and all user-page navs.
 
 OPEN IDEAS (not started)
 ------------------------

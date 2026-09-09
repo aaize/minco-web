@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Post and join online awareness meetings on Minco." />
+  <title>Meetings — Minco</title>
+  <link rel="icon" href="../assets/img/mincologo.png" type="image/png" />
+  <link rel="stylesheet" href="../assets/css/main.css" />
+  <link rel="stylesheet" href="../assets/css/meetings.css" />
+  <link rel="stylesheet" href="../assets/css/chat.css" />
+  <script src="../assets/js/main.js" defer></script>
+  <script src="../assets/js/api.js" defer></script>
+  <script src="../assets/js/meetings.js" defer></script>
+  <script src="../assets/js/chat.js" defer></script>
+</head>
+<body>
+
+  <header class="navbar" id="navbar">
+    <div class="container nav-inner">
+      <a href="home.html" class="logo">
+        <img src="../assets/img/mincologo.png" alt="Minco logo" class="logo-img" />
+        <span class="logo-text">Minco</span>
+      </a>
+      <nav class="nav-links" id="navLinks">
+        <a href="home.html">User page</a>
+        <a href="guidelines.html">Safe space</a>
+        <a href="profile.html">Profile</a>
+        <a href="meetings.html" class="btn btn-small btn-primary">Meetings</a>
+      </nav>
+      <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="back-bar"><a href="home.html">← Back to feed</a></div>
+
+  <main class="meetings-wrap">
+    <div class="meetings-hero">
+      <p class="badge">Awareness circles 🎥</p>
+      <h1>Meet up, <span class="gradient-text">spread awareness</span></h1>
+      <p>Host a calm online session — a sleep wind-down, a stress talk, a small-wins
+        celebration — or join one. Every meeting follows the safe-space guidelines.</p>
+    </div>
+
+    <section class="meet-form-card">
+      <h2>Host a meeting</h2>
+      <div class="form-error" id="formError" role="alert"></div>
+      <form id="meetingForm" novalidate>
+        <div class="field">
+          <label for="mTitle">Title</label>
+          <input id="mTitle" type="text" maxlength="80" placeholder="e.g. Sunday sleep wind-down circle" required />
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="mTopic">Topic</label>
+            <select id="mTopic">
+              <option value="calm">c/calm — wind down</option>
+              <option value="sleep">c/sleep — rest well</option>
+              <option value="stress">c/stress — heavy days</option>
+              <option value="wins">c/wins — small victories</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="mWhen">Date &amp; time</label>
+            <input id="mWhen" type="datetime-local" required />
+          </div>
+          <div class="field">
+            <label for="mDuration">Length</label>
+            <select id="mDuration">
+              <option value="30">30 min</option>
+              <option value="45">45 min</option>
+              <option value="60" selected>1 hour</option>
+              <option value="90">1.5 hours</option>
+              <option value="120">2 hours</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="mLink">Meeting link</label>
+          <input id="mLink" type="url" inputmode="url" placeholder="https://meet… / Zoom / Teams link" required />
+          <small class="hint">Any video link works — Google Meet, Zoom, Teams, Jitsi. Never ask attendees for personal details.</small>
+        </div>
+        <div class="field">
+          <label for="mDesc">What will you cover? <small>(optional)</small></label>
+          <textarea id="mDesc" maxlength="500" rows="3" placeholder="A gentle agenda: introductions, a short talk, open sharing…"></textarea>
+        </div>
+        <label class="agree">
+          <input type="checkbox" id="mAgree" required />
+          <span>This meeting follows the <a href="guidelines.html">safe-space guidelines</a> — kind by design, no medical advice.</span>
+        </label>
+        <button class="btn btn-primary btn-full" type="submit" id="postMeetingBtn">Post meeting</button>
+      </form>
+    </section>
+
+    <section>
+      <h2 class="list-title">Upcoming <span class="count-pill" id="upcomingCount">0</span></h2>
+      <div class="meet-list" id="upcomingList"></div>
+    </section>
+
+    <section>
+      <h2 class="list-title list-title-past">Past meetings</h2>
+      <div class="meet-list" id="pastList"></div>
+    </section>
+  </main>
+
+</body>
+</html>

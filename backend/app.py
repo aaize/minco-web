@@ -90,6 +90,24 @@ def init_db():
           text TEXT NOT NULL,
           created_at INTEGER NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS meetings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+          name TEXT NOT NULL,
+          title TEXT NOT NULL,
+          description TEXT NOT NULL DEFAULT '',
+          link TEXT NOT NULL,
+          topic TEXT NOT NULL DEFAULT 'calm',
+          starts_at INTEGER NOT NULL,
+          duration_min INTEGER NOT NULL DEFAULT 60,
+          rsvps INTEGER NOT NULL DEFAULT 0,
+          created_at INTEGER NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS meeting_rsvps (
+          meeting_id INTEGER NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          PRIMARY KEY (meeting_id, user_id)
+        );
         """
     )
     # Migration for databases created before profiles existed
@@ -524,6 +542,113 @@ def reply(pid):
     db.commit()
     p = db.execute("SELECT * FROM posts WHERE id = ?", (pid,)).fetchone()
     return jsonify({"post": post_to_dict(p, g.user["id"])}), 201
+
+
+def meeting_to_dict(m, viewer_id=None):
+    db = get_db()
+    rsvped = False
+    if viewer_id:
+        rsvped = (
+            db.execute(
+                "SELECT 1 FROM meeting_rsvps WHERE meeting_id = ? AND user_id = ?",
+                (m["id"], viewer_id),
+            ).fetchone()
+            is not None
+        )
+    now = int(time.time() * 1000)
+    return {
+        "id": m["id"], "name": m["name"], "title": m["title"],
+        "description": m["description"], "link": m["link"], "topic": m["topic"],
+        "startsAt": m["starts_at"], "durationMin": m["duration_min"],
+        "rsvps": m["rsvps"], "rsvped": rsvped,
+        "mine": bool(viewer_id) and m["user_id"] == viewer_id,
+        "past": m["starts_at"] + m["duration_min"] * 60000 < now,
+        "ts": m["created_at"],
+    }
+
+
+@app.get("/api/meetings")
+def list_meetings():
+    viewer = auth_user(optional=True)
+    viewer_id = viewer["id"] if viewer else None
+    db = get_db()
+    rows = db.execute("SELECT * FROM meetings ORDER BY starts_at ASC LIMIT 200").fetchall()
+    return jsonify({"meetings": [meeting_to_dict(m, viewer_id) for m in rows]})
+
+
+@app.post("/api/meetings")
+@require_auth
+def create_meeting():
+    data = request.get_json(force=True, silent=True) or {}
+    title = (data.get("title") or "").strip()
+    description = (data.get("description") or "").strip()[:500]
+    topic = (data.get("topic") or "calm").lower()
+    link = (data.get("link") or "").strip()
+    try:
+        starts_at = int(data.get("starts_at", 0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Pick a valid date and time."}), 400
+    try:
+        duration = int(data.get("duration_min", 60))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Pick a valid duration."}), 400
+
+    if not (3 <= len(title) <= 80):
+        return jsonify({"error": "Give the meeting a title (3–80 characters)."}), 400
+    if topic not in COMMUNITIES:
+        return jsonify({"error": "Unknown topic."}), 400
+    if not (link.startswith("https://") or link.startswith("http://")) or len(link) > 500 or " " in link:
+        return jsonify({"error": "Add a valid meeting link starting with https://."}), 400
+    if starts_at <= int(time.time() * 1000):
+        return jsonify({"error": "Pick a date and time in the future."}), 400
+    if not 15 <= duration <= 240:
+        return jsonify({"error": "Duration must be 15–240 minutes."}), 400
+
+    db = get_db()
+    cur = db.execute(
+        "INSERT INTO meetings (user_id, name, title, description, link, topic, starts_at, duration_min, rsvps, created_at)"
+        " VALUES (?,?,?,?,?,?,?,?,0,?)",
+        (g.user["id"], g.user["name"], title, description, link, topic,
+         starts_at, duration, int(time.time() * 1000)),
+    )
+    db.commit()
+    m = db.execute("SELECT * FROM meetings WHERE id = ?", (cur.lastrowid,)).fetchone()
+    return jsonify({"meeting": meeting_to_dict(m, g.user["id"])}), 201
+
+
+@app.post("/api/meetings/<int:mid>/rsvp")
+@require_auth
+def rsvp_meeting(mid):
+    db = get_db()
+    m = db.execute("SELECT * FROM meetings WHERE id = ?", (mid,)).fetchone()
+    if not m:
+        return jsonify({"error": "Meeting not found."}), 404
+    exists = db.execute(
+        "SELECT 1 FROM meeting_rsvps WHERE meeting_id = ? AND user_id = ?", (mid, g.user["id"])
+    ).fetchone()
+    if exists:
+        db.execute("DELETE FROM meeting_rsvps WHERE meeting_id = ? AND user_id = ?", (mid, g.user["id"]))
+        db.execute("UPDATE meetings SET rsvps = rsvps - 1 WHERE id = ?", (mid,))
+    else:
+        db.execute("INSERT INTO meeting_rsvps (meeting_id, user_id) VALUES (?,?)", (mid, g.user["id"]))
+        db.execute("UPDATE meetings SET rsvps = rsvps + 1 WHERE id = ?", (mid,))
+    db.commit()
+    m = db.execute("SELECT * FROM meetings WHERE id = ?", (mid,)).fetchone()
+    return jsonify({"meeting": meeting_to_dict(m, g.user["id"])})
+
+
+@app.delete("/api/meetings/<int:mid>")
+@require_auth
+def delete_meeting(mid):
+    db = get_db()
+    m = db.execute("SELECT * FROM meetings WHERE id = ?", (mid,)).fetchone()
+    if not m:
+        return jsonify({"error": "Meeting not found."}), 404
+    if m["user_id"] != g.user["id"]:
+        return jsonify({"error": "Only the organiser can remove this meeting."}), 403
+    db.execute("DELETE FROM meetings WHERE id = ?", (mid,))
+    db.commit()
+    return jsonify({"ok": True})
 
 
 @app.post("/api/chat")
