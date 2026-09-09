@@ -404,6 +404,7 @@ document.getElementById("postBtn").addEventListener("click", async () => {
       document.getElementById("imgPreviewWrap").classList.add("hidden");
       renderFeed();
       toast("Shared with your community.");
+      document.getElementById("feed").scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     } catch (err) {
       toast(err.message || "Backend unreachable — saved on this device only.");
@@ -429,6 +430,7 @@ document.getElementById("postBtn").addEventListener("click", async () => {
   document.getElementById("imgPreviewWrap").classList.add("hidden");
   renderFeed();
   toast("Shared with your community.");
+  document.getElementById("feed").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 // ---------- sort + communities ----------
@@ -440,11 +442,8 @@ document.getElementById("sortTabs").addEventListener("click", (e) => {
   renderFeed();
 });
 
-document.getElementById("communityList").addEventListener("click", (e) => {
-  const li = e.target.closest("li[data-community]");
-  if (!li) return;
-  activeCommunity = li.dataset.community;
-  document.querySelectorAll("#communityList li").forEach((x) => x.classList.toggle("active", x === li));
+document.getElementById("communityFilter").addEventListener("change", (e) => {
+  activeCommunity = e.target.value;
   renderFeed();
 });
 

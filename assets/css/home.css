@@ -91,7 +91,7 @@ mark {
   background: #fff; border: 1px solid var(--card-border);
   padding: 6px 14px 6px 6px; border-radius: 999px; font-weight: 700; font-size: 0.9rem;
 }
-.user-pill .avatar, .profile-mini .avatar, .composer-top .avatar {
+.user-pill .avatar, .composer-top .avatar {
   border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 800;
   background: linear-gradient(135deg, var(--accent), var(--primary));
 }
@@ -104,12 +104,12 @@ mark {
 .btn-logout:hover { background: #f0efff; transform: translateY(-1px); }
 
 .app-layout {
-  display: grid; grid-template-columns: 260px 1fr 280px;
+  display: grid; grid-template-columns: 1fr 280px;
   gap: 22px; padding: 22px 24px 70px;
-  max-width: 1200px; margin: 0 auto; align-items: start;
+  max-width: 1000px; margin: 0 auto; align-items: start;
 }
 
-.side-card, .feed-composer, .post, .aside-card {
+.feed-composer, .post, .aside-card {
   background: rgba(255,255,255,0.86);
   backdrop-filter: blur(14px);
   border: 1px solid rgba(255,255,255,0.9);
@@ -118,27 +118,7 @@ mark {
   box-shadow: var(--shadow-soft);
 }
 
-.side-card { padding: 22px; position: sticky; top: 92px; }
-.profile-mini { display: flex; gap: 12px; align-items: center; margin-bottom: 18px; }
-.profile-mini .avatar { width: 48px; height: 48px; font-size: 1.2rem; }
-.side-card h3 { margin-bottom: 10px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
-.side-card ul { list-style: none; display: grid; gap: 6px; margin-bottom: 16px; }
-.side-card li {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 12px; border-radius: 12px; cursor: pointer;
-  color: var(--muted); font-weight: 600; font-size: 0.93rem;
-  transition: all 0.15s ease;
-}
-.side-card li.active, .side-card li:hover { background: #efedff; color: var(--ink); transform: translateX(3px); }
-.guide-link {
-  display: flex; align-items: center; gap: 8px;
-  font-weight: 700; font-size: 0.9rem; color: var(--primary-dark);
-  background: #eef0ff; border: 1px dashed var(--primary);
-  padding: 10px 12px; border-radius: 12px;
-}
-.guide-link:hover { background: #e2e6ff; }
-
-/* ---------- Center column ---------- */
+/* ---------- Center column: everyone's posts + composer at the bottom ---------- */
 .feed-col { display: grid; gap: 16px; min-width: 0; }
 
 /* Stories (Instagram) */
@@ -164,8 +144,9 @@ mark {
 .story:hover .ring { transform: scale(1.08) rotate(3deg); }
 .story small { font-size: 0.72rem; color: var(--muted); font-weight: 600; text-align: center; }
 
-/* Composer */
+/* Composer (your box at the bottom of the feed) */
 .feed-composer { padding: 18px; }
+.composer-title { font-size: 1.05rem; margin-bottom: 12px; }
 .pop-in { animation: popIn 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2); }
 @keyframes popIn { from { opacity: 0; transform: translateY(14px) scale(0.99); } to { opacity: 1; transform: none; } }
 .composer-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
@@ -210,6 +191,13 @@ mark {
 }
 .sort-tabs button.active { background: var(--ink); color: #fff; border-color: var(--ink); transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,0,0,0.18); }
 .sort-tabs button:hover:not(.active) { background: #fff; color: var(--ink); }
+#communityFilter {
+  border: 1px solid var(--card-border); background: rgba(255,255,255,0.8);
+  padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  font-weight: 700; font-size: 0.88rem; font-family: inherit; color: var(--ink);
+  margin-left: auto;
+}
+#communityFilter:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(108,92,231,0.15); }
 
 /* ---------- Post = Reddit row + Insta card ---------- */
 .feed { display: grid; gap: 18px; }
@@ -322,7 +310,7 @@ mark {
 
 @media (max-width: 1000px) {
   .app-layout { grid-template-columns: 1fr; }
-  .side-card, .aside { position: static; }
+  .aside { position: static; }
   .app-tabs span { display: none; }
   .post { grid-template-columns: 44px 1fr; }
 }

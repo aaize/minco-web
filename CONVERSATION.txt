@@ -102,8 +102,15 @@ HISTORY (append new entries at the bottom, newest last)
     404 HelpGuide guess were dropped), all 5 new video IDs confirmed via oEmbed
     with real titles/authors. Seed logic changed to insert-if-missing BY URL so
     existing DBs (local + live) gain new seeds on next boot. Verified: 18 total,
-    no dupes. Test servers: kill by PORT (lsof -ti:5100 | xargs kill) — PID
+    no dupes.     Test servers: kill by PORT (lsof -ti:5100 | xargs kill) — PID
     greps race the reloader and can hang the shell.
+19. 2026-09-08 — User-page redesign per request: left sidebar (profile mini,
+    communities, links) REMOVED; feed is now everyone's posts first, composer
+    box ("Share something kind") moved to the BOTTOM, community filter moved
+    into the sort-tabs row as a dropdown, layout narrowed to 2 columns
+    (feed + care/crisis aside, which stays for safety). Posting scrolls you up
+    to your new post. Mid-edit the HTML got mangled (dup blocks) — repaired and
+    verified with a tag-balance + duplicate-id checker.
 
 OPEN IDEAS (not started)
 ------------------------
