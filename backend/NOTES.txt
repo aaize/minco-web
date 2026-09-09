@@ -41,9 +41,11 @@ DATABASE TABLES (inside minco.db)
   duration_min, rsvps, created_at) + meeting_rsvps(meeting_id, user_id)
   (awareness meetings board: post sessions, RSVP toggle, owner delete)
 - resources(id, user_id NULL for seeds, name, kind, title, description, url,
-  topic, created_at) — article/video/podcast library, 5 link-verified seeds
-  (NHS, WHO, 2x YouTube via oEmbed, Spotify show). Seeds are NULL-owner so the
-  owner-only DELETE can never remove them.
+  topic, created_at) — article/video/podcast library, 18 link-verified seeds
+  (7 articles: NHS x2, WHO x3, HelpGuide, Sleep Foundation; 7 videos incl.
+  Indiana Univ. + Epworth + AskDoctorJo; 4 podcasts incl. Happiness Lab).
+  Seeds insert-if-missing BY URL so old DBs gain new seeds on boot.
+  Seeds are NULL-owner so the owner-only DELETE can never remove them.
 
 Seeded automatically on first start: demo user demo@minco.app / minco123
 plus 4 starter posts and 1 reply. Delete minco.db anytime to reset all data.

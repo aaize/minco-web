@@ -165,31 +165,74 @@ def init_db():
             ("Jordan", "Holding space for you. One breath at a time.", now - 3600 * 1000),
         )
         db.commit()
-    if db.execute("SELECT COUNT(*) FROM resources").fetchone()[0] == 0:
-        # Starter library — every URL verified live before seeding
-        starters = [
-            ("article", "Every Mind Matters",
-             "NHS guide with simple, practical tips for sleep, stress, mood and worry.",
-             "https://www.nhs.uk/every-mind-matters/", "calm"),
-            ("article", "Doing What Matters in Times of Stress",
-             "Free illustrated WHO guide for coping with stress and adversity.",
-             "https://www.who.int/publications/i/item/9789240003927", "stress"),
-            ("video", "5-Minute Meditation You Can Do Anywhere",
-             "A short guided reset from Goodful — no experience needed.",
-             "https://www.youtube.com/watch?v=inpok4MKVLM", "calm"),
-            ("video", "Relaxing Sleep Music for Rest and Calm",
-             "Gentle piano for winding down, resting or falling asleep.",
-             "https://www.youtube.com/watch?v=1ZYbU82GVz4", "sleep"),
-            ("podcast", "The Happiness Lab with Dr. Laurie Santos",
-             "Yale scientist explores the science of happiness, one episode at a time.",
-             "https://open.spotify.com/show/3i5TCKhc6GY42pOWkpWveG", "wins"),
-        ]
-        for kind, title, desc, url, topic in starters:
-            db.execute(
-                "INSERT INTO resources (user_id, name, kind, title, description, url, topic, created_at)"
-                " VALUES (NULL, 'Minco Team', ?, ?, ?, ?, ?, ?)",
-                (kind, title, desc, url, topic, now),
-            )
+    # Starter library — every URL verified live before seeding.
+    # Insert-if-missing by URL so existing databases pick up new seeds on boot.
+    starters = [
+        ("article", "Every Mind Matters",
+         "NHS guide with simple, practical tips for sleep, stress, mood and worry.",
+         "https://www.nhs.uk/every-mind-matters/", "calm"),
+        ("article", "Doing What Matters in Times of Stress",
+         "Free illustrated WHO guide for coping with stress and adversity.",
+         "https://www.who.int/publications/i/item/9789240003927", "stress"),
+        ("article", "Stress Management",
+         "HelpGuide's practical techniques to keep stress at healthy levels.",
+         "https://www.helpguide.org/mental-health/stress/stress-management", "stress"),
+        ("article", "Depression — WHO fact sheet",
+         "Clear, trustworthy facts about depression: signs, causes and help.",
+         "https://www.who.int/news-room/fact-sheets/detail/depression", "stress"),
+        ("article", "Anxiety disorders — WHO fact sheet",
+         "Clear, trustworthy facts about anxiety: signs, causes and help.",
+         "https://www.who.int/news-room/fact-sheets/detail/anxiety-disorders", "stress"),
+        ("article", "Breathing exercises for stress",
+         "Step-by-step NHS breathing exercises to calm a busy mind.",
+         "https://www.nhs.uk/mental-health/self-help/guides-tools-and-activities/breathing-exercises-for-stress/", "calm"),
+        ("article", "Sleep Hygiene",
+         "Sleep Foundation's habits and bedroom tips for genuinely better rest.",
+         "https://www.sleepfoundation.org/sleep-hygiene", "sleep"),
+        ("video", "5-Minute Meditation You Can Do Anywhere",
+         "A short guided reset from Goodful — no experience needed.",
+         "https://www.youtube.com/watch?v=inpok4MKVLM", "calm"),
+        ("video", "Relaxing Sleep Music for Rest and Calm",
+         "Gentle piano for winding down, resting or falling asleep.",
+         "https://www.youtube.com/watch?v=1ZYbU82GVz4", "sleep"),
+        ("video", "4-7-8 Calm Breathing Exercise (10 min)",
+         "Follow-along breathing that slows your nervous system down.",
+         "https://www.youtube.com/watch?v=LiUnFJ8P4gM", "calm"),
+        ("video", "Box breathing for stress & anxiety",
+         "AskDoctorJo teaches square breathing plus pursed-lip breathing.",
+         "https://www.youtube.com/watch?v=odADwWzHR24", "stress"),
+        ("video", "Simple Breathing Technique for Anxiety",
+         "Inhale 4, exhale 6 — a pocket-sized calm-down you can reuse anywhere.",
+         "https://www.youtube.com/watch?v=yu_YCluilLE", "stress"),
+        ("video", "Belly breathing: calming body and mind",
+         "Indiana University School of Medicine's gentle belly-breathing guide.",
+         "https://www.youtube.com/watch?v=7Ep5mKuRmAA", "calm"),
+        ("video", "Five Minute Mindful Breathing",
+         "Epworth HealthCare's short mindfulness reset for busy days.",
+         "https://www.youtube.com/watch?v=I-SFdhVwrVA", "calm"),
+        ("podcast", "The Happiness Lab with Dr. Laurie Santos",
+         "Yale scientist explores the science of happiness, one episode at a time.",
+         "https://open.spotify.com/show/3i5TCKhc6GY42pOWkpWveG", "wins"),
+        ("podcast", "Mind. Body. Sleep.",
+         "Holistic insomnia recovery: retrain your brain and reclaim your nights.",
+         "https://open.spotify.com/show/1ELGxaYEJ1rcTzYTr9Cldv", "sleep"),
+        ("podcast", "Peace of Mind",
+         "Compassionate counsellors explore mental health and wellbeing.",
+         "https://open.spotify.com/show/2Zv2XUGPjrlU0BeBzBNjj8", "calm"),
+        ("podcast", "Mental Health — expert conversations",
+         "Psychologists, psychiatrists and doctors on sleep, stress and the mind.",
+         "https://open.spotify.com/show/4Kl6Unxy5zQdjf3qHO78pa", "stress"),
+    ]
+    added = 0
+    for kind, title, desc, url, topic in starters:
+        cur = db.execute(
+            "INSERT INTO resources (user_id, name, kind, title, description, url, topic, created_at)"
+            " SELECT NULL, 'Minco Team', ?, ?, ?, ?, ?, ?"
+            " WHERE NOT EXISTS (SELECT 1 FROM resources WHERE url = ?)",
+            (kind, title, desc, url, topic, now, url),
+        )
+        added += cur.rowcount
+    if added:
         db.commit()
     db.close()
 

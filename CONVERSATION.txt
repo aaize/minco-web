@@ -95,8 +95,15 @@ HISTORY (append new entries at the bottom, newest last)
     table, GET (kind/topic/search filters) / POST / owner-DELETE, all curl-tested.
     Seeded with 5 link-verified picks (NHS + WHO returned 200, both YouTube IDs
     confirmed via oEmbed, Spotify show ID corrected via search: ...veG not ...vCa).
-    Seeds are NULL-owner so nobody can delete them. Test-user cleanup lesson:
+    Seeds are NULL-owner so nobody can delete them.     Test-user cleanup lesson:
     curl assignments printing multiple values break the next URL — print one value.
+18. 2026-09-08 — Library grown 5 → 18 resources (7 articles, 7 videos, 4 podcasts).
+    All verified: articles returned HTTP 200 (Mind.org.uk 403-bot-blocked and a
+    404 HelpGuide guess were dropped), all 5 new video IDs confirmed via oEmbed
+    with real titles/authors. Seed logic changed to insert-if-missing BY URL so
+    existing DBs (local + live) gain new seeds on next boot. Verified: 18 total,
+    no dupes. Test servers: kill by PORT (lsof -ti:5100 | xargs kill) — PID
+    greps race the reloader and can hang the shell.
 
 OPEN IDEAS (not started)
 ------------------------
