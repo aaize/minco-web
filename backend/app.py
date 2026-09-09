@@ -108,6 +108,17 @@ def init_db():
           user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
           PRIMARY KEY (meeting_id, user_id)
         );
+        CREATE TABLE IF NOT EXISTS resources (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+          name TEXT NOT NULL,
+          kind TEXT NOT NULL DEFAULT 'article',
+          title TEXT NOT NULL,
+          description TEXT NOT NULL DEFAULT '',
+          url TEXT NOT NULL,
+          topic TEXT NOT NULL DEFAULT 'calm',
+          created_at INTEGER NOT NULL
+        );
         """
     )
     # Migration for databases created before profiles existed
@@ -153,6 +164,32 @@ def init_db():
             "INSERT INTO replies (post_id, user_id, name, text, created_at) VALUES (1, NULL, ?, ?, ?)",
             ("Jordan", "Holding space for you. One breath at a time.", now - 3600 * 1000),
         )
+        db.commit()
+    if db.execute("SELECT COUNT(*) FROM resources").fetchone()[0] == 0:
+        # Starter library — every URL verified live before seeding
+        starters = [
+            ("article", "Every Mind Matters",
+             "NHS guide with simple, practical tips for sleep, stress, mood and worry.",
+             "https://www.nhs.uk/every-mind-matters/", "calm"),
+            ("article", "Doing What Matters in Times of Stress",
+             "Free illustrated WHO guide for coping with stress and adversity.",
+             "https://www.who.int/publications/i/item/9789240003927", "stress"),
+            ("video", "5-Minute Meditation You Can Do Anywhere",
+             "A short guided reset from Goodful — no experience needed.",
+             "https://www.youtube.com/watch?v=inpok4MKVLM", "calm"),
+            ("video", "Relaxing Sleep Music for Rest and Calm",
+             "Gentle piano for winding down, resting or falling asleep.",
+             "https://www.youtube.com/watch?v=1ZYbU82GVz4", "sleep"),
+            ("podcast", "The Happiness Lab with Dr. Laurie Santos",
+             "Yale scientist explores the science of happiness, one episode at a time.",
+             "https://open.spotify.com/show/3i5TCKhc6GY42pOWkpWveG", "wins"),
+        ]
+        for kind, title, desc, url, topic in starters:
+            db.execute(
+                "INSERT INTO resources (user_id, name, kind, title, description, url, topic, created_at)"
+                " VALUES (NULL, 'Minco Team', ?, ?, ?, ?, ?, ?)",
+                (kind, title, desc, url, topic, now),
+            )
         db.commit()
     db.close()
 
@@ -647,6 +684,84 @@ def delete_meeting(mid):
     if m["user_id"] != g.user["id"]:
         return jsonify({"error": "Only the organiser can remove this meeting."}), 403
     db.execute("DELETE FROM meetings WHERE id = ?", (mid,))
+    db.commit()
+    return jsonify({"ok": True})
+
+
+RESOURCE_KINDS = {"article", "video", "podcast"}
+
+
+def resource_to_dict(r, viewer_id=None):
+    return {
+        "id": r["id"], "name": r["name"], "kind": r["kind"], "title": r["title"],
+        "description": r["description"], "url": r["url"], "topic": r["topic"],
+        "mine": bool(viewer_id) and r["user_id"] == viewer_id,
+        "ts": r["created_at"],
+    }
+
+
+@app.get("/api/resources")
+def list_resources():
+    viewer = auth_user(optional=True)
+    viewer_id = viewer["id"] if viewer else None
+    kind = (request.args.get("kind") or "all").lower()
+    topic = (request.args.get("topic") or "all").lower()
+    q = (request.args.get("q") or "").lower().strip()
+    db = get_db()
+    rows = db.execute("SELECT * FROM resources ORDER BY created_at DESC LIMIT 200").fetchall()
+    out = [resource_to_dict(r, viewer_id) for r in rows]
+    if kind in RESOURCE_KINDS:
+        out = [r for r in out if r["kind"] == kind]
+    if topic in COMMUNITIES:
+        out = [r for r in out if r["topic"] == topic]
+    if q:
+        words = q.split()
+        out = [r for r in out if all(
+            w in (r["title"] + " " + r["description"]).lower() for w in words)]
+    return jsonify({"resources": out})
+
+
+@app.post("/api/resources")
+@require_auth
+def create_resource():
+    data = request.get_json(force=True, silent=True) or {}
+    kind = (data.get("kind") or "article").lower()
+    title = (data.get("title") or "").strip()
+    description = (data.get("description") or "").strip()[:500]
+    url = (data.get("url") or "").strip()
+    topic = (data.get("topic") or "calm").lower()
+
+    if kind not in RESOURCE_KINDS:
+        return jsonify({"error": "Pick article, video or podcast."}), 400
+    if not (3 <= len(title) <= 100):
+        return jsonify({"error": "Give it a title (3–100 characters)."}), 400
+    if topic not in COMMUNITIES:
+        return jsonify({"error": "Unknown topic."}), 400
+    if not (url.startswith("https://") or url.startswith("http://")) or len(url) > 500 or " " in url:
+        return jsonify({"error": "Add a valid link starting with https://."}), 400
+
+    db = get_db()
+    cur = db.execute(
+        "INSERT INTO resources (user_id, name, kind, title, description, url, topic, created_at)"
+        " VALUES (?,?,?,?,?,?,?,?)",
+        (g.user["id"], g.user["name"], kind, title, description, url, topic,
+         int(time.time() * 1000)),
+    )
+    db.commit()
+    r = db.execute("SELECT * FROM resources WHERE id = ?", (cur.lastrowid,)).fetchone()
+    return jsonify({"resource": resource_to_dict(r, g.user["id"])}), 201
+
+
+@app.delete("/api/resources/<int:rid>")
+@require_auth
+def delete_resource(rid):
+    db = get_db()
+    r = db.execute("SELECT * FROM resources WHERE id = ?", (rid,)).fetchone()
+    if not r:
+        return jsonify({"error": "Resource not found."}), 404
+    if r["user_id"] != g.user["id"]:
+        return jsonify({"error": "Only the person who shared it can remove it."}), 403
+    db.execute("DELETE FROM resources WHERE id = ?", (rid,))
     db.commit()
     return jsonify({"ok": True})
 

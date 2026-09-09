@@ -23,6 +23,9 @@ adds real shared accounts and posts when it's running.
 | POST | `/api/meetings` | Bearer | `{title, description, link, topic, starts_at, duration_min}` |
 | POST | `/api/meetings/<id>/rsvp` | Bearer | Toggle "I'm in" |
 | DELETE | `/api/meetings/<id>` | Bearer | Organiser removes own meeting |
+| GET | `/api/resources?kind=&topic=&q=` | optional | Library: articles, videos, podcasts (5 verified seeds) |
+| POST | `/api/resources` | Bearer | `{kind, title, description, url, topic}` |
+| DELETE | `/api/resources/<id>` | Bearer | Sharer removes own resource |
 | POST | `/api/chat` | – | `{message}` → `{reply, crisis}` (offline rules; plug an LLM here later) |
 
 It also serves the site itself: `/` → `index.html`, `/pages/…`, `/assets/…`.

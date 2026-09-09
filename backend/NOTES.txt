@@ -40,6 +40,10 @@ DATABASE TABLES (inside minco.db)
 - meetings(id, user_id, name, title, description, link, topic, starts_at,
   duration_min, rsvps, created_at) + meeting_rsvps(meeting_id, user_id)
   (awareness meetings board: post sessions, RSVP toggle, owner delete)
+- resources(id, user_id NULL for seeds, name, kind, title, description, url,
+  topic, created_at) — article/video/podcast library, 5 link-verified seeds
+  (NHS, WHO, 2x YouTube via oEmbed, Spotify show). Seeds are NULL-owner so the
+  owner-only DELETE can never remove them.
 
 Seeded automatically on first start: demo user demo@minco.app / minco123
 plus 4 starter posts and 1 reply. Delete minco.db anytime to reset all data.
@@ -55,6 +59,8 @@ API ENDPOINTS
 - GET  /api/posts ............... feed (?sort &community &q, plus &mine=1 for own posts)
 - GET/POST /api/meetings ........ awareness board (post future-dated sessions with
   video link; RSVP toggle at POST /api/meetings/<id>/rsvp; owner DELETE)
+- GET/POST /api/resources ........ library (kind/topic/search filters; sharer DELETE).
+  Frontend embeds YouTube + Spotify inline, rest opens externally.
 - POST /api/posts ............... new post {text, community, image?} (needs token)
 - POST /api/posts/<id>/vote .... {value: 1, 0 or -1} (needs token)
 - POST /api/posts/<id>/love .... toggle support (needs token)

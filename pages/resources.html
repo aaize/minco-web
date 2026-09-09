@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Minco resource library — articles, videos and podcasts for mental wellbeing." />
+  <title>Resources — Minco</title>
+  <link rel="icon" href="../assets/img/mincologo.png" type="image/png" />
+  <link rel="stylesheet" href="../assets/css/main.css" />
+  <link rel="stylesheet" href="../assets/css/resources.css" />
+  <link rel="stylesheet" href="../assets/css/chat.css" />
+  <script src="../assets/js/main.js" defer></script>
+  <script src="../assets/js/api.js" defer></script>
+  <script src="../assets/js/resources.js" defer></script>
+  <script src="../assets/js/chat.js" defer></script>
+</head>
+<body>
+
+  <header class="navbar" id="navbar">
+    <div class="container nav-inner">
+      <a href="home.html" class="logo">
+        <img src="../assets/img/mincologo.png" alt="Minco logo" class="logo-img" />
+        <span class="logo-text">Minco</span>
+      </a>
+      <nav class="nav-links" id="navLinks">
+        <a href="home.html">User page</a>
+        <a href="guidelines.html">Safe space</a>
+        <a href="profile.html">Profile</a>
+        <a href="meetings.html">Meetings</a>
+        <a href="resources.html" class="btn btn-small btn-primary">Resources</a>
+      </nav>
+      <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="back-bar"><a href="home.html">← Back to feed</a></div>
+
+  <main class="res-wrap">
+    <div class="res-hero">
+      <p class="badge">Learn &amp; heal 📚</p>
+      <h1>Gentle <span class="gradient-text">resources</span></h1>
+      <p>Articles to read, videos to watch, podcasts to listen to — shared by the
+        community, all playable right here. Peer picks, not medical advice.</p>
+    </div>
+
+    <section class="share-card">
+      <h2>Share a resource</h2>
+      <div class="form-error" id="formError" role="alert"></div>
+      <form id="resourceForm" novalidate>
+        <div class="field-row">
+          <div class="field">
+            <label for="rKind">Type</label>
+            <select id="rKind">
+              <option value="article">📄 Article</option>
+              <option value="video">🎥 Video</option>
+              <option value="podcast">🎙️ Podcast</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="rTopic">Topic</label>
+            <select id="rTopic">
+              <option value="calm">c/calm — wind down</option>
+              <option value="sleep">c/sleep — rest well</option>
+              <option value="stress">c/stress — heavy days</option>
+              <option value="wins">c/wins — small victories</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="rTitle">Title</label>
+          <input id="rTitle" type="text" maxlength="100" placeholder="e.g. A 5-minute guide to calmer evenings" required />
+        </div>
+        <div class="field">
+          <label for="rUrl">Link</label>
+          <input id="rUrl" type="url" inputmode="url" placeholder="https://…" required />
+          <small class="hint" id="urlHint">Link to a helpful article or guide.</small>
+        </div>
+        <div class="field">
+          <label for="rDesc">Why is it worth a look? <small>(optional)</small></label>
+          <textarea id="rDesc" maxlength="500" rows="2" placeholder="One or two sentences…"></textarea>
+        </div>
+        <label class="agree">
+          <input type="checkbox" id="rAgree" required />
+          <span>This is supportive and safe — no medical advice, diagnoses or harmful content.</span>
+        </label>
+        <button class="btn btn-primary btn-full" type="submit" id="shareBtn">Share resource</button>
+      </form>
+    </section>
+
+    <div class="filter-bar">
+      <div class="kind-tabs" id="kindTabs">
+        <button class="active" data-kind="all">All</button>
+        <button data-kind="article">📄 Articles</button>
+        <button data-kind="video">🎥 Videos</button>
+        <button data-kind="podcast">🎙️ Podcasts</button>
+      </div>
+      <div class="filter-row">
+        <select id="topicFilter" aria-label="Filter by topic">
+          <option value="all">All topics</option>
+          <option value="calm">c/calm</option>
+          <option value="sleep">c/sleep</option>
+          <option value="stress">c/stress</option>
+          <option value="wins">c/wins</option>
+        </select>
+        <input id="searchBox" type="search" placeholder="Search resources…" aria-label="Search resources" />
+      </div>
+    </div>
+
+    <p class="result-meta" id="resultMeta"></p>
+    <div class="res-list" id="resList"></div>
+
+    <p class="res-note">Minco is peer support, not professional care. If something here
+      doesn't feel right for you, skip it — and if you're in crisis, contact your
+      local emergency number or crisis helpline right away.</p>
+  </main>
+
+</body>
+</html>

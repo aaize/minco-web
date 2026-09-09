@@ -27,7 +27,8 @@ CURRENT STATE (as of 2026-09-08 — everything below is built, tested, live)
 Pages: index.html (landing), pages/register.html, pages/login.html,
   pages/home.html (feed), pages/guidelines.html, pages/games.html (breathing,
   memory match, tic-tac-toe), pages/profile.html (Instagram-style),
-  pages/meetings.html (awareness meetings board: host/join/RSVP).
+  pages/meetings.html (awareness meetings board: host/join/RSVP),
+  pages/resources.html (article/video/podcast library with inline players).
 Widgets: Minco Helper chat (rule-based Wellness Q&A) on home/guidelines/games/profile.
 Backend (backend/app.py): /api/health, register, login, me (GET+PUT), logout,
   posts CRUD + vote/love/replies, ?mine=1 filter, /api/chat (offline rules).
@@ -87,6 +88,15 @@ HISTORY (append new entries at the bottom, newest last)
     Backend: meetings + meeting_rsvps tables, GET/POST /api/meetings,
     POST rsvp, owner-only DELETE — all curl-tested (validation, 403, toggle).
     Page linked from feed tabs + sidebar and all user-page navs.
+17. 2026-09-08 — Resource library: articles open externally, YouTube videos and
+    Spotify podcasts play INLINE in the browser, anything else falls back to an
+    external button. Users can share (kind/topic/title/link + safety checkbox),
+    filter by kind tabs + topic + search, remove own shares. Backend: resources
+    table, GET (kind/topic/search filters) / POST / owner-DELETE, all curl-tested.
+    Seeded with 5 link-verified picks (NHS + WHO returned 200, both YouTube IDs
+    confirmed via oEmbed, Spotify show ID corrected via search: ...veG not ...vCa).
+    Seeds are NULL-owner so nobody can delete them. Test-user cleanup lesson:
+    curl assignments printing multiple values break the next URL — print one value.
 
 OPEN IDEAS (not started)
 ------------------------
