@@ -22,16 +22,22 @@ STACK
   mode). Key file: assets/js/api.js (auto-detects backend via /api/health,
   same-origin default, localStorage "minco_api_base" override).
 
-CURRENT STATE (as of 2026-09-08 — everything below is built, tested, live)
+CURRENT STATE (as of 2026-09-10 — everything below is built, tested, live)
 ---------------------------------------------------------------------------
 Pages: index.html (landing), pages/register.html, pages/login.html,
   pages/home.html (feed), pages/guidelines.html, pages/games.html (breathing,
   memory match, tic-tac-toe), pages/profile.html (Instagram-style),
   pages/meetings.html (awareness meetings board: host/join/RSVP),
-  pages/resources.html (article/video/podcast library with inline players).
+   pages/resources.html (article/video/podcast library with inline players).
 Widgets: Minco Helper chat (rule-based Wellness Q&A) on home/guidelines/games/profile.
+  Mood calendar on home: floating 📅 button (bottom-left) + popup (5 moods with
+  scores, optional note, month calendar, weekly avg/7-day dots). Auto-opens once
+  per day after login when today's mood is missing. Weekly avg < 2.5 (2+ check-ins)
+  or a 😭 day shows professional-help guidance (GP/counsellor, crisis lines,
+  links to resources + meetings). No diagnoses, moods private per account.
 Backend (backend/app.py): /api/health, register, login, me (GET+PUT), logout,
-  posts CRUD + vote/love/replies, ?mine=1 filter, /api/chat (offline rules).
+  posts CRUD + vote/love/replies, ?mine=1 filter, meetings, resources,
+  moods (POST upsert + GET with weekly summary), /api/chat (offline rules).
   Serves / and /index.html + /pages/ + /assets/ itself.
 Database: backend/minco.db (git-ignored), users/sessions/posts/votes/loves/replies.
   users has bio + avatar columns (auto-migrate on boot). Demo seed: 1 user, 4 posts.
@@ -105,12 +111,23 @@ HISTORY (append new entries at the bottom, newest last)
     no dupes.     Test servers: kill by PORT (lsof -ti:5100 | xargs kill) — PID
     greps race the reloader and can hang the shell.
 19. 2026-09-08 — User-page redesign per request: left sidebar (profile mini,
-    communities, links) REMOVED; feed is now everyone's posts first, composer
-    box ("Share something kind") moved to the BOTTOM, community filter moved
-    into the sort-tabs row as a dropdown, layout narrowed to 2 columns
-    (feed + care/crisis aside, which stays for safety). Posting scrolls you up
-    to your new post. Mid-edit the HTML got mangled (dup blocks) — repaired and
-    verified with a tag-balance + duplicate-id checker.
+   communities, links) REMOVED; feed is now everyone's posts first, composer
+   box ("Share something kind") moved to the BOTTOM, community filter moved
+   into the sort-tabs row as a dropdown, layout narrowed to 2 columns
+   (feed + care/crisis aside, which stays for safety). Posting scrolls you up
+   to your new post. Mid-edit the HTML got mangled (dup blocks) — repaired and
+   verified with a tag-balance + duplicate-id checker.
+20. 2026-09-10 — Mood calendar: daily check-in popup auto-opens once/day after
+    login when today's mood is missing; floating 📅 button (bottom-left, dot
+    while missing) reopens anytime. 5 moods (awful=1 … great=5) + optional
+    200-char note, month calendar with emoji dots, weekly avg + 7-day dots.
+    Avg < 2.5 (2+ check-ins) or a 1/5 day shows GP/counsellor + crisis-line
+    guidance with links (no diagnoses, no named doctors). Backend: moods table
+    UNIQUE(user_id, date), POST upsert (rejects future dates) + GET with weekly
+    summary — all curl-tested (401/400/upsert/low-flag). Frontend
+    (assets/js/mood.js + assets/css/mood.css, wired into home.html) works
+    offline via localStorage fallback. Test-server lesson: system python has no
+    flask — use backend/.venv/bin/python.
 
 OPEN IDEAS (not started)
 ------------------------

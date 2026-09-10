@@ -46,6 +46,9 @@ DATABASE TABLES (inside minco.db)
   Indiana Univ. + Epworth + AskDoctorJo; 4 podcasts incl. Happiness Lab).
   Seeds insert-if-missing BY URL so old DBs gain new seeds on boot.
   Seeds are NULL-owner so the owner-only DELETE can never remove them.
+- moods(id, user_id, date YYYY-MM-DD, mood, score 1-5, note, created_at),
+  UNIQUE(user_id, date) — one check-in per day, re-saving overwrites.
+  Moods: awful=1, low=2, okay=3, good=4, great=5.
 
 Seeded automatically on first start: demo user demo@minco.app / minco123
 plus 4 starter posts and 1 reply. Delete minco.db anytime to reset all data.
@@ -67,6 +70,10 @@ API ENDPOINTS
 - POST /api/posts/<id>/vote .... {value: 1, 0 or -1} (needs token)
 - POST /api/posts/<id>/love .... toggle support (needs token)
 - POST /api/posts/<id>/replies . {text} (needs token)
+- POST /api/moods ................ {mood, date?, note?} upsert one check-in
+  per day (validates mood/date, rejects future dates; needs token) -> {mood, weekly}
+- GET  /api/moods ................ own check-ins (?days=31) + weekly summary
+  {avg, count, low, days} — low = avg < 2.5 with 2+ check-ins (needs token)
 - POST /api/chat ................ {message} -> {reply, crisis} (offline rules for now)
 
 HOW THE FRONTEND CONNECTS
@@ -75,6 +82,8 @@ HOW THE FRONTEND CONNECTS
   checks /api/health, and remembers a working server. Backend up -> real API.
   Backend down -> pages silently fall back to localStorage demo mode.
 - auth.js tries /api/register and /api/login first, falls back offline.
+- mood.js (home page): daily check-in popup + calendar + weekly score,
+  backend-first with localStorage fallback (minco_moods_v1), prompts once/day.
 - home.js pulls the feed from /api/posts and syncs votes/loves/replies/posts.
 - chat.js tries /api/chat first, falls back to its built-in offline answers.
 - Override the server manually: localStorage.setItem("minco_api_base", "http://...")

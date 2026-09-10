@@ -119,6 +119,16 @@ def init_db():
           topic TEXT NOT NULL DEFAULT 'calm',
           created_at INTEGER NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS moods (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          date TEXT NOT NULL,
+          mood TEXT NOT NULL,
+          score INTEGER NOT NULL,
+          note TEXT NOT NULL DEFAULT '',
+          created_at INTEGER NOT NULL,
+          UNIQUE (user_id, date)
+        );
         """
     )
     # Migration for databases created before profiles existed
@@ -807,6 +817,90 @@ def delete_resource(rid):
     db.execute("DELETE FROM resources WHERE id = ?", (rid,))
     db.commit()
     return jsonify({"ok": True})
+
+
+MOODS = {"awful": 1, "low": 2, "okay": 3, "good": 4, "great": 5}
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def mood_to_dict(m):
+    return {
+        "date": m["date"], "mood": m["mood"], "score": m["score"],
+        "note": m["note"], "ts": m["created_at"],
+    }
+
+
+def weekly_summary(rows_by_date):
+    """Average score over the last 7 calendar days (UTC)."""
+    import datetime
+    today = datetime.date.today()
+    days = []
+    total, count = 0, 0
+    for i in range(6, -1, -1):
+        d = (today - datetime.timedelta(days=i)).isoformat()
+        r = rows_by_date.get(d)
+        if r:
+            total += r["score"]
+            count += 1
+            days.append({"date": d, "score": r["score"], "mood": r["mood"]})
+        else:
+            days.append({"date": d, "score": None, "mood": None})
+    avg = round(total / count, 1) if count else None
+    return {"avg": avg, "count": count, "low": bool(count >= 2 and avg is not None and avg < 2.5),
+            "days": days}
+
+
+@app.get("/api/moods")
+@require_auth
+def list_moods():
+    try:
+        days = max(1, min(int(request.args.get("days", 31)), 365))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid days parameter."}), 400
+    db = get_db()
+    rows = db.execute(
+        "SELECT * FROM moods WHERE user_id = ? ORDER BY date DESC LIMIT ?",
+        (g.user["id"], days),
+    ).fetchall()
+    moods = [mood_to_dict(m) for m in rows]
+    by_date = {m["date"]: m for m in rows}
+    return jsonify({"moods": moods, "weekly": weekly_summary(by_date)})
+
+
+@app.post("/api/moods")
+@require_auth
+def save_mood():
+    import datetime
+    data = request.get_json(force=True, silent=True) or {}
+    mood = (data.get("mood") or "").strip().lower()
+    if mood not in MOODS:
+        return jsonify({"error": "Pick how you feel: awful, low, okay, good or great."}), 400
+    date = (data.get("date") or "").strip() or datetime.date.today().isoformat()
+    if not DATE_RE.match(date):
+        return jsonify({"error": "Invalid date."}), 400
+    try:
+        parsed = datetime.date.fromisoformat(date)
+    except ValueError:
+        return jsonify({"error": "Invalid date."}), 400
+    if parsed > datetime.date.today():
+        return jsonify({"error": "You can't log a mood for a future day."}), 400
+    note = (data.get("note") or "").strip()[:200]
+    db = get_db()
+    now = int(time.time() * 1000)
+    db.execute(
+        "INSERT INTO moods (user_id, date, mood, score, note, created_at)"
+        " VALUES (?,?,?,?,?,?)"
+        " ON CONFLICT(user_id, date) DO UPDATE SET mood=excluded.mood,"
+        " score=excluded.score, note=excluded.note",
+        (g.user["id"], date, mood, MOODS[mood], note, now),
+    )
+    db.commit()
+    m = db.execute("SELECT * FROM moods WHERE user_id = ? AND date = ?",
+                   (g.user["id"], date)).fetchone()
+    rows = db.execute("SELECT * FROM moods WHERE user_id = ? ORDER BY date DESC LIMIT 7",
+                      (g.user["id"],)).fetchall()
+    return jsonify({"mood": mood_to_dict(m),
+                    "weekly": weekly_summary({r["date"]: r for r in rows})}), 201
 
 
 @app.post("/api/chat")
