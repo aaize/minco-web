@@ -84,6 +84,10 @@ HOW THE FRONTEND CONNECTS
 - auth.js tries /api/register and /api/login first, falls back offline.
 - mood.js (home page): daily check-in popup + calendar + weekly score,
   backend-first with localStorage fallback (minco_moods_v1), prompts once/day.
+- checkin.js (checkin page): wellbeing questionnaires, scored 100% on-device.
+  Answers are never sent to the server or stored — only an optional local
+  score history (minco_checkin_history) stays in the browser. No backend
+  endpoints; results are reflection bands, never diagnoses.
 - home.js pulls the feed from /api/posts and syncs votes/loves/replies/posts.
 - chat.js tries /api/chat first, falls back to its built-in offline answers.
 - Override the server manually: localStorage.setItem("minco_api_base", "http://...")

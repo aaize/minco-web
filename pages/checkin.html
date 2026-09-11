@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Answer a short wellbeing questionnaire and see your reflection score on Minco." />
+  <title>Check-in — Minco</title>
+  <link rel="icon" href="../assets/img/mincologo.png" type="image/png" />
+  <link rel="stylesheet" href="../assets/css/main.css" />
+  <link rel="stylesheet" href="../assets/css/checkin.css" />
+  <link rel="stylesheet" href="../assets/css/chat.css" />
+  <script src="../assets/js/main.js" defer></script>
+  <script src="../assets/js/api.js" defer></script>
+  <script src="../assets/js/checkin.js" defer></script>
+  <script src="../assets/js/chat.js" defer></script>
+</head>
+<body>
+
+  <header class="navbar" id="navbar">
+    <div class="container nav-inner">
+      <a href="home.html" class="logo">
+        <img src="../assets/img/mincologo.png" alt="Minco logo" class="logo-img" />
+        <span class="logo-text">Minco</span>
+      </a>
+      <nav class="nav-links" id="navLinks">
+        <a href="home.html">User page</a>
+        <a href="guidelines.html">Safe space</a>
+        <a href="profile.html">Profile</a>
+        <a href="resources.html">Resources</a>
+        <a href="meetings.html">Meetings</a>
+        <a href="checkin.html" class="btn btn-small btn-primary">Check-in</a>
+      </nav>
+      <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="back-bar"><a href="home.html">← Back to feed</a></div>
+
+  <main class="checkin-wrap">
+    <div class="checkin-hero">
+      <p class="badge">Wellbeing check-in 💜</p>
+      <h1>How have you <span class="gradient-text">really been?</span></h1>
+      <p>Answer honestly about the last 2 weeks. You'll get a reflection score
+        with gentle next steps — nothing is stored or sent anywhere.</p>
+    </div>
+
+    <div class="checkin-disclaimer">
+      <strong>Not a diagnosis.</strong> These are short self-reflection questionnaires
+      inspired by standard wellbeing screeners. Only a qualified professional can
+      assess your mental health. If anything here worries you, please talk to your
+      GP, a counsellor, or a trusted helpline.
+    </div>
+
+    <div class="screener-tabs" id="screenerTabs" role="tablist" aria-label="Choose questionnaire">
+      <button class="active" data-screener="mood" role="tab" aria-selected="true">🌧️ Low mood · 9 questions</button>
+      <button data-screener="worry" role="tab" aria-selected="false">🌊 Worry · 7 questions</button>
+    </div>
+
+    <section class="quiz-card" id="quizCard">
+      <div class="quiz-progress">
+        <span id="progressLabel">0 of 9 answered</span>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+      <p class="quiz-frame">Over the <strong>last 2 weeks</strong>, how often have you been bothered by…</p>
+      <div id="questionList"></div>
+      <div class="form-error" id="quizError" role="alert"></div>
+      <button class="btn btn-primary btn-full" id="seeResultBtn" type="button">See my result</button>
+    </section>
+
+    <section class="result-card hidden" id="resultCard" aria-live="polite">
+      <p class="result-kicker" id="resultKicker">Your reflection</p>
+      <div class="result-score-row">
+        <span class="result-score" id="resultScore">0</span>
+        <div>
+          <strong id="resultBand">Minimal</strong>
+          <p id="resultRange">out of 27 · low-mood check</p>
+        </div>
+      </div>
+      <div class="result-bar"><div class="result-fill" id="resultFill"></div></div>
+      <p class="result-guidance" id="resultGuidance"></p>
+      <div class="result-crisis hidden" id="resultCrisis">
+        <h4>💜 Please reach out right now</h4>
+        <p>You mentioned thoughts of harming yourself. You deserve real support —
+          Minco can't help in a crisis. Call your local emergency number, or a
+          crisis helpline (US: <strong>988</strong>, UK: Samaritans
+          <strong>116 123</strong>). If you can, stay with someone you trust.</p>
+      </div>
+      <div class="result-actions">
+        <button class="btn btn-outline btn-small" id="retakeBtn" type="button">Retake</button>
+        <button class="btn btn-outline btn-small" id="saveHistoryBtn" type="button">Save to my history</button>
+        <a class="btn btn-outline btn-small" href="resources.html">Resources</a>
+        <a class="btn btn-outline btn-small" href="meetings.html">Meetings</a>
+      </div>
+      <p class="result-note">Saved history lives only in this browser — Minco never sees your answers.</p>
+    </section>
+
+    <section class="history-card">
+      <div class="history-head">
+        <h2>My past check-ins</h2>
+        <button class="del-btn" id="clearHistoryBtn" type="button">Clear history</button>
+      </div>
+      <div id="historyList"></div>
+    </section>
+  </main>
+
+</body>
+</html>

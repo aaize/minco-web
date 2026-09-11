@@ -35,6 +35,10 @@ Widgets: Minco Helper chat (rule-based Wellness Q&A) on home/guidelines/games/pr
   per day after login when today's mood is missing. Weekly avg < 2.5 (2+ check-ins)
   or a 😭 day shows professional-help guidance (GP/counsellor, crisis lines,
   links to resources + meetings). No diagnoses, moods private per account.
+  Check-in tab (pages/checkin.html): low-mood (9Q) + worry (7Q) questionnaires,
+  0-3 scale, scored 100% on-device — answers never sent/stored. Result shows
+  score, band + guidance; self-harm answer triggers crisis box. Optional local
+  score history only. Linked from all user-page navs.
 Backend (backend/app.py): /api/health, register, login, me (GET+PUT), logout,
   posts CRUD + vote/love/replies, ?mine=1 filter, meetings, resources,
   moods (POST upsert + GET with weekly summary), /api/chat (offline rules).
@@ -128,6 +132,16 @@ HISTORY (append new entries at the bottom, newest last)
     (assets/js/mood.js + assets/css/mood.css, wired into home.html) works
     offline via localStorage fallback. Test-server lesson: system python has no
     flask — use backend/.venv/bin/python.
+21. 2026-09-11 — Questionnaire tab ("Check-in"): low-mood (9 questions) + worry
+    (7 questions) screeners, 0-3 scale over last 2 weeks, standard bands
+    (mood /27: minimal/mild/moderate/mod-severe/severe; worry /21 up to severe).
+    Result card shows score, band, tailored guidance + links; any self-harm
+    answer forces the crisis box. PRIVACY: scored fully on-device, answers never
+    leave the browser; only optional score history in localStorage. No backend
+    changes. New files pages/checkin.html + assets/css/checkin.css +
+    assets/js/checkin.js; "Check-in" link added to all 5 navbar navs + home
+    app-tabs. Verified: node --check, band boundaries, page serves 200 with
+    balanced tags, links present over HTTP.
 
 OPEN IDEAS (not started)
 ------------------------
