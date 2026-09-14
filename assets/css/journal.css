@@ -1,0 +1,95 @@
+/* ==========================================================
+   journal.css — private journal tab. Mirrors checkin/meetings
+   card language + main.css tokens.
+   ========================================================== */
+
+.back-bar { max-width: 920px; margin: 0 auto; padding: 14px 24px 0; }
+.back-bar a { font-weight: 700; color: var(--primary-dark); }
+.back-bar a:hover { text-decoration: underline; }
+
+.journal-wrap { max-width: 920px; margin: 0 auto; padding: 18px 24px 70px; display: grid; gap: 22px; }
+
+.journal-hero { text-align: center; max-width: 640px; margin: 0 auto; }
+.journal-hero .badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  color: var(--primary-dark); font-weight: 700; font-size: 0.85rem;
+  padding: 8px 16px; border-radius: 999px; margin-bottom: 14px;
+  box-shadow: var(--shadow-soft);
+}
+.journal-hero h1 { font-size: 2.6rem; letter-spacing: -0.02em; margin-bottom: 10px; }
+.journal-hero p { color: var(--muted); }
+
+.journal-privacy {
+  background: #eef4ff; border: 1px solid #c9dbff; color: #27407a;
+  border-radius: 16px; padding: 14px 18px; font-size: 0.9rem; line-height: 1.55;
+}
+
+.journal-form-card, .journal-list-card {
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  outline: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  padding: 26px 28px;
+}
+.journal-form-card h2, .journal-list-card h2 { font-size: 1.15rem; margin-bottom: 12px; }
+.journal-form-card input, .journal-form-card textarea, .journal-list-head input {
+  width: 100%; font-family: inherit; font-size: 0.95rem;
+  border: 1px solid var(--card-border); border-radius: 12px;
+  padding: 12px 14px; background: #fff; color: var(--ink);
+}
+.journal-form-card textarea { min-height: 120px; resize: vertical; margin-top: 10px; }
+.journal-form-card input:focus, .journal-form-card textarea:focus, .journal-list-head input:focus {
+  outline: 2px solid var(--primary); border-color: var(--primary);
+}
+.journal-form-row { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.journal-form-row select {
+  font-family: inherit; font-size: 0.88rem; font-weight: 600;
+  border: 1px solid var(--card-border); border-radius: 12px;
+  padding: 10px 12px; background: #fff; color: var(--ink);
+}
+.char-count { margin-left: auto; font-size: 0.8rem; color: var(--muted); }
+.journal-form-actions { display: flex; gap: 8px; margin-top: 14px; }
+.journal-hint { margin-top: 10px; font-size: 0.78rem; color: var(--muted); }
+
+.form-error {
+  display: none; background: #fdecec; color: #b3261e;
+  border: 1px solid #f5c2c0; padding: 10px 14px;
+  border-radius: 12px; font-size: 0.9rem; margin-top: 12px;
+}
+.form-error.show { display: block; }
+.hidden { display: none !important; }
+
+.journal-list-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.journal-list-head h2 { margin: 0; margin-right: auto; }
+.journal-list-head input { width: 220px; }
+.entry-empty { color: var(--muted); font-size: 0.9rem; }
+.entry {
+  border-top: 1px solid var(--card-border); padding: 14px 0;
+  display: grid; gap: 6px;
+}
+.entry-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.entry-top strong { font-size: 1rem; }
+.entry-date { color: var(--muted); font-size: 0.8rem; }
+.mood-pill {
+  font-size: 0.75rem; font-weight: 800; padding: 3px 10px; border-radius: 999px;
+  background: #efedff; color: var(--primary-dark);
+}
+.entry-text { white-space: pre-wrap; font-size: 0.93rem; line-height: 1.6; }
+.entry-actions { display: flex; gap: 8px; }
+.entry-actions button {
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  font-size: 0.82rem; font-weight: 700; color: var(--primary-dark); padding: 2px 0;
+}
+.entry-actions button.danger { color: #b3261e; }
+.entry-actions button:hover { text-decoration: underline; }
+
+@media (max-width: 640px) {
+  .journal-hero h1 { font-size: 2rem; }
+  .journal-wrap { padding: 14px 16px 60px; }
+  .journal-form-card, .journal-list-card { padding: 22px 20px; }
+  .journal-list-head input { width: 100%; }
+}

@@ -28,7 +28,8 @@ Pages: index.html (landing), pages/register.html, pages/login.html,
   pages/home.html (feed), pages/guidelines.html, pages/games.html (breathing,
   memory match, tic-tac-toe), pages/profile.html (Instagram-style),
   pages/meetings.html (awareness meetings board: host/join/RSVP),
-   pages/resources.html (article/video/podcast library with inline players).
+   pages/resources.html (article/video/podcast library with inline players),
+   pages/journal.html (private journal: title/text/mood-tag, search, edit/delete).
 Widgets: Minco Helper chat (rule-based Wellness Q&A) on home/guidelines/games/profile.
   Mood calendar on home: floating 📅 button (bottom-left) + popup (5 moods with
   scores, optional note, month calendar, weekly avg/7-day dots). Auto-opens once
@@ -43,9 +44,10 @@ Backend (backend/app.py): /api/health, register, login, me (GET+PUT), logout,
   posts + vote/love/replies + DELETE owner-only + save toggle + report,
   ?mine=1 filter, GET /api/saves, GET /api/reports/mine, meetings, resources,
   moods (POST upsert + GET with weekly summary), /api/chat (offline rules),
-  /api/wellness/daily, /api/support, /api/stats/me + /api/stats/community.
+  /api/wellness/daily, /api/support, /api/stats/me + /api/stats/community,
+  /api/journal GET/POST + GET/PUT/DELETE <id> (private per-user).
   Serves / and /index.html + /pages/ + /assets/ itself.
-Database: backend/minco.db (git-ignored), users/sessions/posts/votes/loves/replies/saves/reports.
+Database: backend/minco.db (git-ignored), users/sessions/posts/votes/loves/replies/saves/reports/journal_entries.
   users has bio + avatar columns (auto-migrate on boot). Demo seed: 1 user, 4 posts.
 Deploys: PythonAnywhere manual app, Python 3.10, venv /home/aaize09/.virtualenvs/minco,
   WSGI /var/www/aaize09_pythonanywhere_com_wsgi.py, source /home/aaize09/minco-web/backend.
@@ -156,6 +158,14 @@ HISTORY (append new entries at the bottom, newest last)
     Tested on :5102: happy paths + 403/409/400/401 guards all pass; test
     users cleaned (DB back to 1 user/4 posts). Docs mirrored in backend/NOTES.txt.
     NOT yet deployed — needs git push + PA pull + Reload.
+24. 2026-09-14 — Private journal built (user picked "private journal"):
+    journal_entries table + GET/POST /api/journal (?q, ?limit) + GET/PUT/DELETE
+    /api/journal/<id>, all require_auth + user_id-scoped (others get 404).
+    New pages/journal.html + assets/css/journal.css + assets/js/journal.js
+    (backend-first, localStorage minco_journal_v1 fallback, search/edit/delete,
+    login gate). Journal link added to home app-tabs + 6 navs + api.js helpers.
+    Tested on :5103: validation 400s, cross-user 404s, owner CRUD, 401s, page 200.
+    Test data cleaned. Docs mirrored in backend/NOTES.txt. NOT yet deployed.
 
 OPEN IDEAS (not started)
 ------------------------

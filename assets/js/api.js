@@ -76,5 +76,10 @@
     supportInfo: () => req("/api/support"),
     myStats: () => req("/api/stats/me", { auth: true }),
     communityStats: () => req("/api/stats/community"),
+    listJournal: (q) => req(`/api/journal${q ? `?q=${encodeURIComponent(q)}` : ""}`, { auth: true }),
+    createJournal: (entry) => req("/api/journal", { method: "POST", auth: true, body: entry }),
+    getJournal: (id) => req(`/api/journal/${id}`, { auth: true }),
+    updateJournal: (id, entry) => req(`/api/journal/${id}`, { method: "PUT", auth: true, body: entry }),
+    deleteJournal: (id) => req(`/api/journal/${id}`, { method: "DELETE", auth: true }),
   };
 })();

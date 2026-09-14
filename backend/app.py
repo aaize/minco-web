@@ -104,6 +104,15 @@ def init_db():
           created_at INTEGER NOT NULL,
           UNIQUE (post_id, user_id)
         );
+        CREATE TABLE IF NOT EXISTS journal_entries (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          title TEXT NOT NULL DEFAULT '',
+          text TEXT NOT NULL,
+          mood TEXT NOT NULL DEFAULT '',
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS meetings (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -747,6 +756,105 @@ def my_reports():
         (g.user["id"],),
     ).fetchall()
     return jsonify({"reports": [dict(r) for r in rows]})
+
+
+def journal_to_dict(j):
+    return {
+        "id": j["id"], "title": j["title"], "text": j["text"], "mood": j["mood"],
+        "ts": j["created_at"], "updated": j["updated_at"],
+    }
+
+
+def validate_journal(data):
+    title = (data.get("title") or "").strip()[:80]
+    text = (data.get("text") or "").strip()
+    mood = (data.get("mood") or "").strip().lower()
+    if not text:
+        return None, (jsonify({"error": "Write something first — entry can't be empty."}), 400)
+    if len(text) > 2000:
+        return None, (jsonify({"error": "Entry too long — keep it under 2000 characters."}), 400)
+    if mood and mood not in MOODS:
+        return None, (jsonify({"error": "Unknown mood — pick awful, low, okay, good or great."}), 400)
+    return {"title": title, "text": text, "mood": mood}, None
+
+
+@app.get("/api/journal")
+@require_auth
+def list_journal():
+    q = (request.args.get("q") or "").lower().strip()
+    try:
+        limit = max(1, min(int(request.args.get("limit", 50)), 100))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid limit."}), 400
+    db = get_db()
+    rows = db.execute(
+        "SELECT * FROM journal_entries WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
+        (g.user["id"], limit),
+    ).fetchall()
+    out = [journal_to_dict(j) for j in rows]
+    if q:
+        words = q.split()
+        out = [e for e in out if all(
+            w in (e["title"] + " " + e["text"]).lower() for w in words)]
+    return jsonify({"entries": out})
+
+
+@app.post("/api/journal")
+@require_auth
+def create_journal():
+    data = request.get_json(force=True, silent=True) or {}
+    clean, err = validate_journal(data)
+    if err:
+        return err
+    now = int(time.time() * 1000)
+    db = get_db()
+    cur = db.execute(
+        "INSERT INTO journal_entries (user_id, title, text, mood, created_at, updated_at)"
+        " VALUES (?,?,?,?,?,?)",
+        (g.user["id"], clean["title"], clean["text"], clean["mood"], now, now),
+    )
+    db.commit()
+    j = db.execute("SELECT * FROM journal_entries WHERE id = ?", (cur.lastrowid,)).fetchone()
+    return jsonify({"entry": journal_to_dict(j)}), 201
+
+
+@app.get("/api/journal/<int:jid>")
+@require_auth
+def get_journal(jid):
+    j = get_db().execute("SELECT * FROM journal_entries WHERE id = ?", (jid,)).fetchone()
+    if not j or j["user_id"] != g.user["id"]:
+        return jsonify({"error": "Entry not found."}), 404
+    return jsonify({"entry": journal_to_dict(j)})
+
+
+@app.put("/api/journal/<int:jid>")
+@require_auth
+def update_journal(jid):
+    db = get_db()
+    j = db.execute("SELECT * FROM journal_entries WHERE id = ?", (jid,)).fetchone()
+    if not j or j["user_id"] != g.user["id"]:
+        return jsonify({"error": "Entry not found."}), 404
+    data = request.get_json(force=True, silent=True) or {}
+    clean, err = validate_journal(data)
+    if err:
+        return err
+    db.execute("UPDATE journal_entries SET title = ?, text = ?, mood = ?, updated_at = ? WHERE id = ?",
+               (clean["title"], clean["text"], clean["mood"], int(time.time() * 1000), jid))
+    db.commit()
+    j = db.execute("SELECT * FROM journal_entries WHERE id = ?", (jid,)).fetchone()
+    return jsonify({"entry": journal_to_dict(j)})
+
+
+@app.delete("/api/journal/<int:jid>")
+@require_auth
+def delete_journal(jid):
+    db = get_db()
+    j = db.execute("SELECT * FROM journal_entries WHERE id = ?", (jid,)).fetchone()
+    if not j or j["user_id"] != g.user["id"]:
+        return jsonify({"error": "Entry not found."}), 404
+    db.execute("DELETE FROM journal_entries WHERE id = ?", (jid,))
+    db.commit()
+    return jsonify({"ok": True})
 
 
 def meeting_to_dict(m, viewer_id=None):

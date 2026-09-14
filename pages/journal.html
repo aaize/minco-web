@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Your private journal on Minco — only you can read it." />
+  <title>Journal — Minco</title>
+  <link rel="icon" href="../assets/img/mincologo.png" type="image/png" />
+  <link rel="stylesheet" href="../assets/css/main.css" />
+  <link rel="stylesheet" href="../assets/css/journal.css" />
+  <link rel="stylesheet" href="../assets/css/chat.css" />
+  <script src="../assets/js/main.js" defer></script>
+  <script src="../assets/js/api.js" defer></script>
+  <script src="../assets/js/journal.js" defer></script>
+  <script src="../assets/js/chat.js" defer></script>
+</head>
+<body>
+
+  <header class="navbar" id="navbar">
+    <div class="container nav-inner">
+      <a href="home.html" class="logo">
+        <img src="../assets/img/mincologo.png" alt="Minco logo" class="logo-img" />
+        <span class="logo-text">Minco</span>
+      </a>
+      <nav class="nav-links" id="navLinks">
+        <a href="home.html">User page</a>
+        <a href="guidelines.html">Safe space</a>
+        <a href="profile.html">Profile</a>
+        <a href="resources.html">Resources</a>
+        <a href="checkin.html">Check-in</a>
+        <a href="journal.html" class="btn btn-small btn-primary">Journal</a>
+      </nav>
+      <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="back-bar"><a href="home.html">← Back to feed</a></div>
+
+  <main class="journal-wrap">
+    <div class="journal-hero">
+      <p class="badge">Private journal 🔒</p>
+      <h1>Just for <span class="gradient-text">you</span></h1>
+      <p>Only you can read this — not even other members. Write freely, edit anytime.</p>
+    </div>
+
+    <div class="journal-privacy">
+      <strong>🔒 Private by design.</strong> Entries are tied to your account
+      (<span id="privacyWho">you</span>) and never appear in the feed, profile, or search.
+    </div>
+
+    <section class="journal-form-card">
+      <h2 id="formTitle">New entry</h2>
+      <input id="entryTitle" maxlength="80" placeholder="Title (optional)" aria-label="Entry title" />
+      <textarea id="entryText" maxlength="2000" placeholder="What's on your mind today?"></textarea>
+      <div class="journal-form-row">
+        <select id="entryMood" aria-label="Tag a mood">
+          <option value="">No mood tag</option>
+          <option value="awful">😭 awful</option>
+          <option value="low">😟 low</option>
+          <option value="okay">😐 okay</option>
+          <option value="good">🙂 good</option>
+          <option value="great">🤩 great</option>
+        </select>
+        <span class="char-count" id="charCount">0/2000</span>
+      </div>
+      <div class="form-error" id="formError" role="alert"></div>
+      <div class="journal-form-actions">
+        <button class="btn btn-primary btn-small" id="saveBtn" type="button">Save entry</button>
+        <button class="btn btn-outline btn-small hidden" id="cancelEditBtn" type="button">Cancel</button>
+      </div>
+      <p class="journal-hint" id="backendHint"></p>
+    </section>
+
+    <section class="journal-list-card">
+      <div class="journal-list-head">
+        <h2>My entries</h2>
+        <input id="searchInput" type="search" placeholder="Search entries..." aria-label="Search entries" />
+      </div>
+      <div id="entryList"></div>
+    </section>
+  </main>
+
+</body>
+</html>

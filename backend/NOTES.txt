@@ -41,6 +41,9 @@ DATABASE TABLES (inside minco.db)
   column (counts via SELECT COUNT(*); post_to_dict adds saves/saved)
 - reports(id, post_id, user_id, reason, created_at) UNIQUE(post_id, user_id) —
   safety flags; reason in {spam, unkind, unsafe, medical, other} + optional detail
+- journal_entries(id, user_id NOT NULL, title, text, mood, created_at, updated_at) —
+  PRIVATE per-account journal (never shared; all queries filter by user_id, other
+  users get 404). Title 0-80, text 1-2000, mood optional in {awful,low,okay,good,great}.
 - meetings(id, user_id, name, title, description, link, topic, starts_at,
   duration_min, rsvps, created_at) + meeting_rsvps(meeting_id, user_id)
   (awareness meetings board: post sessions, RSVP toggle, owner delete)
@@ -86,6 +89,10 @@ API ENDPOINTS
 - GET  /api/stats/community ..... totals {users, posts, replies, loves, meetingsUpcoming, resources}
 - GET  /api/stats/me ............ {posts, lovesReceived/Given, repliesReceived, saved,
   rsvps, checkins, streakDays, karma = posts*2 + lovesRx*3 + repliesRx} (needs token)
+- GET/POST /api/journal ......... private entries (?q search, ?limit 50 max 100;
+  POST {title?, text 1-2000, mood?}) + GET/PUT/DELETE /api/journal/<id>
+  (owner-only, others get 404; needs token). Frontend pages/journal.html +
+  assets/js/journal.js (backend-first, localStorage minco_journal_v1 fallback).
 - POST /api/moods ................ {mood, date?, note?} upsert one check-in
   per day (validates mood/date, rejects future dates; needs token) -> {mood, weekly}
 - GET  /api/moods ................ own check-ins (?days=31) + weekly summary
