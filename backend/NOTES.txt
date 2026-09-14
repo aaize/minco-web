@@ -37,6 +37,10 @@ DATABASE TABLES (inside minco.db)
 - votes(post_id, user_id, value) .... one row per user per post
 - loves(post_id, user_id) ........... one row per support given
 - replies(id, post_id, user_id, name, text, created_at)
+- saves(post_id, user_id, created_at) PK(post_id, user_id) — bookmarks, no count
+  column (counts via SELECT COUNT(*); post_to_dict adds saves/saved)
+- reports(id, post_id, user_id, reason, created_at) UNIQUE(post_id, user_id) —
+  safety flags; reason in {spam, unkind, unsafe, medical, other} + optional detail
 - meetings(id, user_id, name, title, description, link, topic, starts_at,
   duration_min, rsvps, created_at) + meeting_rsvps(meeting_id, user_id)
   (awareness meetings board: post sessions, RSVP toggle, owner delete)
@@ -70,6 +74,18 @@ API ENDPOINTS
 - POST /api/posts/<id>/vote .... {value: 1, 0 or -1} (needs token)
 - POST /api/posts/<id>/love .... toggle support (needs token)
 - POST /api/posts/<id>/replies . {text} (needs token)
+- DELETE /api/posts/<id> ......... owner-only delete + manual cascade
+  (votes/loves/replies/saves/reports; SQLite FKs off by default)
+- POST /api/posts/<id>/save ..... bookmark toggle (needs token) -> {saved, saves, post}
+- GET  /api/saves ............... own bookmarked posts, newest-saved first (needs token)
+- POST /api/posts/<id>/report ... {reason: spam|unkind|unsafe|medical|other, detail?}
+  (needs token, one per user per post -> 409 on dup) -> {ok, reports}
+- GET  /api/reports/mine ........ posts I flagged (needs token)
+- GET  /api/wellness/daily ...... deterministic daily {affirmation, breathing, tip} (public)
+- GET  /api/support ............. structured crisis lines + app links (public)
+- GET  /api/stats/community ..... totals {users, posts, replies, loves, meetingsUpcoming, resources}
+- GET  /api/stats/me ............ {posts, lovesReceived/Given, repliesReceived, saved,
+  rsvps, checkins, streakDays, karma = posts*2 + lovesRx*3 + repliesRx} (needs token)
 - POST /api/moods ................ {mood, date?, note?} upsert one check-in
   per day (validates mood/date, rejects future dates; needs token) -> {mood, weekly}
 - GET  /api/moods ................ own check-ins (?days=31) + weekly summary

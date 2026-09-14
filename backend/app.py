@@ -90,6 +90,20 @@ def init_db():
           text TEXT NOT NULL,
           created_at INTEGER NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS saves (
+          post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          created_at INTEGER NOT NULL,
+          PRIMARY KEY (post_id, user_id)
+        );
+        CREATE TABLE IF NOT EXISTS reports (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          reason TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          UNIQUE (post_id, user_id)
+        );
         CREATE TABLE IF NOT EXISTS meetings (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -303,6 +317,8 @@ def post_to_dict(p, viewer_id=None):
         ).fetchall()
     ]
     user_vote, loved = 0, False
+    saved, saves = False, 0
+    saves = db.execute("SELECT COUNT(*) c FROM saves WHERE post_id = ?", (p["id"],)).fetchone()["c"]
     if viewer_id:
         v = db.execute(
             "SELECT value FROM votes WHERE post_id = ? AND user_id = ?", (p["id"], viewer_id)
@@ -314,10 +330,17 @@ def post_to_dict(p, viewer_id=None):
             ).fetchone()
             is not None
         )
+        saved = (
+            db.execute(
+                "SELECT 1 FROM saves WHERE post_id = ? AND user_id = ?", (p["id"], viewer_id)
+            ).fetchone()
+            is not None
+        )
     return {
         "id": p["id"], "name": p["name"], "community": p["community"], "tag": p["tag"],
         "text": p["text"], "image": p["image"], "ups": p["ups"], "downs": p["downs"],
         "loves": p["loves"], "userVote": user_vote, "loved": loved,
+        "saves": saves, "saved": saved,
         "mine": bool(viewer_id) and p["user_id"] == viewer_id,
         "time": time_ago(p["created_at"]), "ts": p["created_at"], "replies": replies,
     }
@@ -634,6 +657,98 @@ def reply(pid):
     return jsonify({"post": post_to_dict(p, g.user["id"])}), 201
 
 
+@app.delete("/api/posts/<int:pid>")
+@require_auth
+def delete_post(pid):
+    db = get_db()
+    p = db.execute("SELECT * FROM posts WHERE id = ?", (pid,)).fetchone()
+    if not p:
+        return jsonify({"error": "Post not found."}), 404
+    if p["user_id"] != g.user["id"]:
+        return jsonify({"error": "Only the author can delete this post."}), 403
+    # Manual cascade (SQLite FKs off by default)
+    db.execute("DELETE FROM votes WHERE post_id = ?", (pid,))
+    db.execute("DELETE FROM loves WHERE post_id = ?", (pid,))
+    db.execute("DELETE FROM replies WHERE post_id = ?", (pid,))
+    db.execute("DELETE FROM saves WHERE post_id = ?", (pid,))
+    db.execute("DELETE FROM reports WHERE post_id = ?", (pid,))
+    db.execute("DELETE FROM posts WHERE id = ?", (pid,))
+    db.commit()
+    return jsonify({"ok": True})
+
+
+@app.get("/api/saves")
+@require_auth
+def list_saves():
+    db = get_db()
+    rows = db.execute(
+        "SELECT p.* FROM posts p JOIN saves s ON s.post_id = p.id"
+        " WHERE s.user_id = ? ORDER BY s.created_at DESC LIMIT 100",
+        (g.user["id"],),
+    ).fetchall()
+    return jsonify({"posts": [post_to_dict(p, g.user["id"]) for p in rows]})
+
+
+@app.post("/api/posts/<int:pid>/save")
+@require_auth
+def toggle_save(pid):
+    db = get_db()
+    p = db.execute("SELECT * FROM posts WHERE id = ?", (pid,)).fetchone()
+    if not p:
+        return jsonify({"error": "Post not found."}), 404
+    exists = db.execute("SELECT 1 FROM saves WHERE post_id = ? AND user_id = ?",
+                        (pid, g.user["id"])).fetchone()
+    if exists:
+        db.execute("DELETE FROM saves WHERE post_id = ? AND user_id = ?", (pid, g.user["id"]))
+        saved = False
+    else:
+        db.execute("INSERT INTO saves (post_id, user_id, created_at) VALUES (?,?,?)",
+                   (pid, g.user["id"], int(time.time() * 1000)))
+        saved = True
+    db.commit()
+    count = db.execute("SELECT COUNT(*) c FROM saves WHERE post_id = ?", (pid,)).fetchone()["c"]
+    return jsonify({"saved": saved, "saves": count,
+                    "post": post_to_dict(
+                        db.execute("SELECT * FROM posts WHERE id = ?", (pid,)).fetchone(),
+                        g.user["id"])})
+
+
+REPORT_REASONS = {"spam", "unkind", "unsafe", "medical", "other"}
+
+
+@app.post("/api/posts/<int:pid>/report")
+@require_auth
+def report_post(pid):
+    data = request.get_json(force=True, silent=True) or {}
+    reason = (data.get("reason") or "").strip().lower()[:20]
+    detail = (data.get("detail") or "").strip()[:200]
+    if reason not in REPORT_REASONS:
+        return jsonify({"error": "Pick a reason: spam, unkind, unsafe, medical or other."}), 400
+    db = get_db()
+    if not db.execute("SELECT 1 FROM posts WHERE id = ?", (pid,)).fetchone():
+        return jsonify({"error": "Post not found."}), 404
+    if db.execute("SELECT 1 FROM reports WHERE post_id = ? AND user_id = ?",
+                  (pid, g.user["id"])).fetchone():
+        return jsonify({"error": "You already reported this post. Thank you — we see it."}), 409
+    stored = reason + (f": {detail}" if detail else "")
+    db.execute("INSERT INTO reports (post_id, user_id, reason, created_at) VALUES (?,?,?,?)",
+               (pid, g.user["id"], stored, int(time.time() * 1000)))
+    db.commit()
+    count = db.execute("SELECT COUNT(*) c FROM reports WHERE post_id = ?", (pid,)).fetchone()["c"]
+    return jsonify({"ok": True, "reports": count}), 201
+
+
+@app.get("/api/reports/mine")
+@require_auth
+def my_reports():
+    db = get_db()
+    rows = db.execute(
+        "SELECT post_id, reason, created_at FROM reports WHERE user_id = ? ORDER BY created_at DESC LIMIT 100",
+        (g.user["id"],),
+    ).fetchall()
+    return jsonify({"reports": [dict(r) for r in rows]})
+
+
 def meeting_to_dict(m, viewer_id=None):
     db = get_db()
     rsvped = False
@@ -912,6 +1027,125 @@ def chat():
     # Later: if AI_PROVIDER set, call OpenAI/Anthropic here and keep crisis check first.
     crisis, text = chat_reply(message)
     return jsonify({"reply": text, "crisis": crisis, "provider": "offline-rules"})
+
+
+# ---------------- wellness / support / stats (no new deps) ----------------
+AFFIRMATIONS = [
+    "You belong here, exactly as you are.",
+    "Small steps still move you forward.",
+    "It's okay to rest — rest is productive too.",
+    "You have survived every hard day so far.",
+    "Be as kind to yourself as you are to others.",
+    "One breath at a time is enough.",
+    "Your feelings are valid, even the heavy ones.",
+    "Asking for support is a sign of strength.",
+    "Today is a fresh page — go gently.",
+    "You matter to this community.",
+    "Progress, not perfection.",
+    "It's okay to just read quietly today.",
+    "Courage looks like showing up, even tired.",
+    "This tough feeling will shift — hold on.",
+]
+
+BREATHING = [
+    {"name": "4-4-6 Reset", "inhale": 4, "hold": 4, "exhale": 6, "rounds": 4},
+    {"name": "Box Breathing", "inhale": 4, "hold": 4, "exhale": 4, "rounds": 4},
+    {"name": "Quick Calm 4-6", "inhale": 4, "hold": 0, "exhale": 6, "rounds": 5},
+]
+
+TIPS = [
+    "Phone away 30 min before bed tonight.",
+    "Step out for 5 minutes of daylight.",
+    "Write a 2-minute brain-dump, then pick one tiny next step.",
+    "Drink a glass of water and stretch your shoulders.",
+    "Reply kindly to one person in c/calm.",
+    "Name 3 things you see, 2 you hear, 1 you touch.",
+    "Take a 10-minute walk, no podcast — just notice.",
+]
+
+
+@app.get("/api/wellness/daily")
+def wellness_daily():
+    """Deterministic daily pick (same for everyone, changes each day). No auth."""
+    import datetime
+    today = datetime.date.today()
+    ordinal = today.toordinal()
+    return jsonify({
+        "date": today.isoformat(),
+        "affirmation": AFFIRMATIONS[ordinal % len(AFFIRMATIONS)],
+        "breathing": BREATHING[ordinal % len(BREATHING)],
+        "tip": TIPS[ordinal % len(TIPS)],
+    })
+
+
+@app.get("/api/support")
+def support_info():
+    """Structured crisis + community links. Public so every page can render it."""
+    return jsonify({
+        "note": "Minco is peer support, not professional care. In crisis, contact local pros now.",
+        "crisis": [
+            {"label": "Emergency", "detail": "Call your local emergency number", "tel": ""},
+            {"label": "US — 988 Lifeline", "detail": "Call or text 988, 24/7", "tel": "988"},
+            {"label": "UK — Samaritans", "detail": "Call 116 123, 24/7", "tel": "116123"},
+            {"label": "CA — 988", "detail": "Call or text 988, 24/7", "tel": "988"},
+            {"label": "AU — Lifeline", "detail": "Call 13 11 14, 24/7", "tel": "131114"},
+            {"label": "International", "detail": "findahelpline.org", "url": "https://findahelpline.org/"},
+        ],
+        "links": [
+            {"label": "Library", "url": "/pages/resources.html"},
+            {"label": "Meetings", "url": "/pages/meetings.html"},
+            {"label": "Check-in", "url": "/pages/checkin.html"},
+        ],
+    })
+
+
+@app.get("/api/stats/community")
+def stats_community():
+    db = get_db()
+    now = int(time.time() * 1000)
+    return jsonify({
+        "users": db.execute("SELECT COUNT(*) c FROM users").fetchone()["c"],
+        "posts": db.execute("SELECT COUNT(*) c FROM posts").fetchone()["c"],
+        "replies": db.execute("SELECT COUNT(*) c FROM replies").fetchone()["c"],
+        "loves": db.execute("SELECT COALESCE(SUM(loves),0) c FROM posts").fetchone()["c"],
+        "meetingsUpcoming": db.execute(
+            "SELECT COUNT(*) c FROM meetings WHERE starts_at > ?", (now,)).fetchone()["c"],
+        "resources": db.execute("SELECT COUNT(*) c FROM resources").fetchone()["c"],
+    })
+
+
+@app.get("/api/stats/me")
+@require_auth
+def stats_me():
+    import datetime
+    db = get_db()
+    uid = g.user["id"]
+    my_posts = db.execute("SELECT COUNT(*) c FROM posts WHERE user_id = ?", (uid,)).fetchone()["c"]
+    loves_rx = db.execute(
+        "SELECT COALESCE(SUM(loves),0) c FROM posts WHERE user_id = ?", (uid,)).fetchone()["c"]
+    replies_rx = db.execute(
+        "SELECT COUNT(*) c FROM replies WHERE post_id IN (SELECT id FROM posts WHERE user_id = ?)",
+        (uid,)).fetchone()["c"]
+    loves_given = db.execute("SELECT COUNT(*) c FROM loves WHERE user_id = ?", (uid,)).fetchone()["c"]
+    saved = db.execute("SELECT COUNT(*) c FROM saves WHERE user_id = ?", (uid,)).fetchone()["c"]
+    rsvps = db.execute("SELECT COUNT(*) c FROM meeting_rsvps WHERE user_id = ?", (uid,)).fetchone()["c"]
+    checkins = db.execute("SELECT COUNT(*) c FROM moods WHERE user_id = ?", (uid,)).fetchone()["c"]
+    # Mood streak: consecutive days ending today (or yesterday if today missing)
+    rows = {r["date"]: 1 for r in db.execute(
+        "SELECT date FROM moods WHERE user_id = ?", (uid,)).fetchall()}
+    streak = 0
+    day = datetime.date.today()
+    if day.isoformat() not in rows:
+        day -= datetime.timedelta(days=1)
+    while day.isoformat() in rows:
+        streak += 1
+        day -= datetime.timedelta(days=1)
+    return jsonify({
+        "posts": my_posts, "lovesReceived": loves_rx, "repliesReceived": replies_rx,
+        "lovesGiven": loves_given, "saved": saved, "rsvps": rsvps,
+        "checkins": checkins, "streakDays": streak,
+        "karma": my_posts * 2 + loves_rx * 3 + replies_rx,
+    })
 
 
 # ---------------- serve frontend (one-command demo) ----------------

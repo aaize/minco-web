@@ -22,7 +22,7 @@ STACK
   mode). Key file: assets/js/api.js (auto-detects backend via /api/health,
   same-origin default, localStorage "minco_api_base" override).
 
-CURRENT STATE (as of 2026-09-10 — everything below is built, tested, live)
+CURRENT STATE (as of 2026-09-14 — everything below is built, tested, live except new APIs await deploy)
 ---------------------------------------------------------------------------
 Pages: index.html (landing), pages/register.html, pages/login.html,
   pages/home.html (feed), pages/guidelines.html, pages/games.html (breathing,
@@ -40,10 +40,12 @@ Widgets: Minco Helper chat (rule-based Wellness Q&A) on home/guidelines/games/pr
   score, band + guidance; self-harm answer triggers crisis box. Optional local
   score history only. Linked from all user-page navs.
 Backend (backend/app.py): /api/health, register, login, me (GET+PUT), logout,
-  posts CRUD + vote/love/replies, ?mine=1 filter, meetings, resources,
-  moods (POST upsert + GET with weekly summary), /api/chat (offline rules).
+  posts + vote/love/replies + DELETE owner-only + save toggle + report,
+  ?mine=1 filter, GET /api/saves, GET /api/reports/mine, meetings, resources,
+  moods (POST upsert + GET with weekly summary), /api/chat (offline rules),
+  /api/wellness/daily, /api/support, /api/stats/me + /api/stats/community.
   Serves / and /index.html + /pages/ + /assets/ itself.
-Database: backend/minco.db (git-ignored), users/sessions/posts/votes/loves/replies.
+Database: backend/minco.db (git-ignored), users/sessions/posts/votes/loves/replies/saves/reports.
   users has bio + avatar columns (auto-migrate on boot). Demo seed: 1 user, 4 posts.
 Deploys: PythonAnywhere manual app, Python 3.10, venv /home/aaize09/.virtualenvs/minco,
   WSGI /var/www/aaize09_pythonanywhere_com_wsgi.py, source /home/aaize09/minco-web/backend.
@@ -141,7 +143,19 @@ HISTORY (append new entries at the bottom, newest last)
     changes. New files pages/checkin.html + assets/css/checkin.css +
     assets/js/checkin.js; "Check-in" link added to all 5 navbar navs + home
     app-tabs. Verified: node --check, band boundaries, page serves 200 with
-    balanced tags, links present over HTTP.
+         balanced tags, links present over HTTP.
+22. 2026-09-14 — User asked AI to always refer to CONVERSATION.txt and append
+    on every change. Confirmed: file is CONVERSATION.txt (uppercase) at repo
+    root; no lowercase conversation.txt exists. Rule adopted going forward.
+23. 2026-09-14 — Added 9 RESTful APIs (user asked "add something useful"):
+    DELETE /api/posts/<id> (owner-only + cascade), POST save toggle +
+    GET /api/saves (bookmarks), POST report + GET /api/reports/mine (safety),
+    GET /api/wellness/daily (affirmation+breathing+tip), GET /api/support
+    (crisis lines), GET /api/stats/me + /api/stats/community (karma/streak).
+    post_to_dict now returns saves/saved. api.js gained matching helpers.
+    Tested on :5102: happy paths + 403/409/400/401 guards all pass; test
+    users cleaned (DB back to 1 user/4 posts). Docs mirrored in backend/NOTES.txt.
+    NOT yet deployed — needs git push + PA pull + Reload.
 
 OPEN IDEAS (not started)
 ------------------------

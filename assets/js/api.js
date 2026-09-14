@@ -63,5 +63,18 @@
     return data;
   }
 
-  window.MincoAPI = { getBase, getToken, setToken, available, resetCache, req };
+  window.MincoAPI = {
+    getBase, getToken, setToken, available, resetCache, req,
+    // REST helpers (backend-first; caller falls back to localStorage if needed)
+    deletePost: (id) => req(`/api/posts/${id}`, { method: "DELETE", auth: true }),
+    toggleSave: (id) => req(`/api/posts/${id}/save`, { method: "POST", auth: true }),
+    getSaved: () => req("/api/saves", { auth: true }),
+    reportPost: (id, reason, detail) =>
+      req(`/api/posts/${id}/report`, { method: "POST", auth: true, body: { reason, detail } }),
+    myReports: () => req("/api/reports/mine", { auth: true }),
+    dailyWellness: () => req("/api/wellness/daily"),
+    supportInfo: () => req("/api/support"),
+    myStats: () => req("/api/stats/me", { auth: true }),
+    communityStats: () => req("/api/stats/community"),
+  };
 })();
