@@ -97,6 +97,97 @@
       <p class="result-note">Saved history lives only in this browser — Minco never sees your answers.</p>
     </section>
 
+    <section class="stats-card" id="statsCard" aria-live="polite">
+      <div class="stats-head">
+        <div>
+          <h2>📊 My wellbeing insights</h2>
+          <p class="stats-sub">Your current mental-health snapshot, built only from check-ins you saved in this browser.</p>
+        </div>
+        <div class="stats-filters">
+          <div class="seg" id="statsScreenerSeg" role="tablist" aria-label="Statistics scope">
+            <button class="active" data-scope="all" role="tab" aria-selected="true">Both</button>
+            <button data-scope="mood" role="tab" aria-selected="false">Low mood</button>
+            <button data-scope="worry" role="tab" aria-selected="false">Worry</button>
+          </div>
+          <div class="seg" id="statsRangeSeg" role="tablist" aria-label="Time range">
+            <button class="active" data-range="30" role="tab" aria-selected="true">30 days</button>
+            <button data-range="7" role="tab" aria-selected="false">7 days</button>
+            <button data-range="0" role="tab" aria-selected="false">All time</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-empty" id="statsEmpty">
+        <p><strong>No saved check-ins yet.</strong></p>
+        <p>Answer the questionnaire above, tap <em>“See my result”</em>, then <em>“Save to my history”</em> — your trends, symptom breakdown and insights will appear here.</p>
+      </div>
+
+      <div class="stats-body hidden" id="statsBody">
+        <!-- Current mental-health snapshot -->
+        <div class="current-state" id="currentState">
+          <span class="state-dot" id="stateDot"></span>
+          <div>
+            <strong id="stateTitle">—</strong>
+            <p id="stateDesc">—</p>
+          </div>
+          <div class="wellness-ring" title="Wellbeing score: higher is steadier">
+            <svg viewBox="0 0 80 80" width="72" height="72" aria-hidden="true">
+              <circle cx="40" cy="40" r="34" fill="none" stroke="#eceaf7" stroke-width="9" />
+              <circle cx="40" cy="40" r="34" fill="none" id="wellnessArc"
+                stroke="url(#wellGrad)" stroke-width="9" stroke-linecap="round"
+                stroke-dasharray="213.6" stroke-dashoffset="213.6" transform="rotate(-90 40 40)" />
+              <defs>
+                <linearGradient id="wellGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#4fa3e3" />
+                  <stop offset="100%" stop-color="#6c5ce7" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="wellness-num"><strong id="wellnessScore">–</strong><small>/100</small></div>
+          </div>
+        </div>
+
+        <!-- KPI tiles -->
+        <div class="stat-tiles">
+          <div class="stat-tile"><small>Total check-ins</small><strong id="statTotal">0</strong><span id="statTotalSub">—</span></div>
+          <div class="stat-tile"><small>Latest score</small><strong id="statLatest">—</strong><span id="statLatestSub">—</span></div>
+          <div class="stat-tile"><small>Average severity</small><strong id="statAvg">—</strong><span id="statAvgSub">—</span></div>
+          <div class="stat-tile"><small>Trend</small><strong id="statTrend">—</strong><span id="statTrendSub">—</span></div>
+        </div>
+
+        <!-- Trend + distribution -->
+        <div class="stats-grid-2">
+          <div class="stats-panel">
+            <h3>Score over time <small id="trendHint"></small></h3>
+            <canvas id="trendChart" height="180" aria-label="Check-in scores over time" role="img"></canvas>
+            <div class="chart-legend"><span><i class="dot-mood"></i>Low mood /27</span><span><i class="dot-worry"></i>Worry /21</span></div>
+          </div>
+          <div class="stats-panel">
+            <h3>Time in each band</h3>
+            <div id="bandDist"></div>
+            <p class="panel-note" id="streakLine"></p>
+          </div>
+        </div>
+
+        <!-- Symptom breakdown -->
+        <div class="stats-panel">
+          <h3>What’s driving your score? <small>per-question breakdown</small></h3>
+          <div class="break-toggle">
+            <button class="active" id="breakLatestBtn" type="button">Latest check-in</button>
+            <button id="breakAvgBtn" type="button">Average across history</button>
+          </div>
+          <div id="symptomBars"></div>
+          <p class="panel-note">0 = not at all · 1 = several days · 2 = more than half the days · 3 = nearly every day. Higher bars deserve the most gentleness.</p>
+        </div>
+
+        <!-- Auto insights -->
+        <div class="stats-panel insights">
+          <h3>💡 Gentle insights <small>auto-written from your saved check-ins</small></h3>
+          <ul id="insightsList"></ul>
+        </div>
+      </div>
+    </section>
+
     <section class="history-card">
       <div class="history-head">
         <h2>My past check-ins</h2>
