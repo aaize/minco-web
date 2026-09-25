@@ -201,7 +201,8 @@
       btn.disabled = false;
       const label = selectedDate === todayStr() ? "today" : selectedDate;
       msg.textContent = `Saved for ${label} — thank you for checking in. 💜`;
-      setTimeout(() => { msg.textContent = ""; }, 3500);
+      // Auto-close shortly after a successful save so the user lands back on the page.
+      setTimeout(() => { msg.textContent = ""; close(); }, 1200);
     });
   }
 
