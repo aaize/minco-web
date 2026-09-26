@@ -361,10 +361,61 @@ document.getElementById("feed").addEventListener("submit", (e) => {
   toast("Reply posted — thank you for showing up.");
 });
 
-// ---------- composer ----------
+// ---------- composer (shared by bottom box + quick-post popup) ----------
+async function publishPost({ text, community, image, clear }) {
+  if (!text && !image) {
+    toast("Write something kind or add an image first.");
+    return false;
+  }
+  // Backend first (real shared post), local fallback otherwise
+  if (useBackend) {
+    try {
+      const { post } = await API().req("/api/posts", {
+        method: "POST", auth: true, body: { text, community, image },
+      });
+      const posts = getPosts();
+      posts.unshift(post);
+      savePosts(posts);
+      clear();
+      renderFeed();
+      toast("Shared with your community.");
+      document.getElementById("feed").scrollIntoView({ behavior: "smooth", block: "start" });
+      return true;
+    } catch (err) {
+      toast(err.message || "Backend unreachable — saved on this device only.");
+    }
+  }
+  const posts = getPosts();
+  posts.unshift({
+    id: Date.now(),
+    name: session.name,
+    time: "Just now",
+    ts: Date.now(),
+    community,
+    tag: "Shared",
+    text: text.slice(0, 280) || "(shared a photo)",
+    image,
+    ups: 1, downs: 0, userVote: 1, loves: 0, loved: false,
+    replies: [],
+  });
+  savePosts(posts);
+  clear();
+  renderFeed();
+  toast("Shared with your community.");
+  document.getElementById("feed").scrollIntoView({ behavior: "smooth", block: "start" });
+  return true;
+}
+
+// ---------- composer (bottom box) ----------
 const box = document.getElementById("composerText");
 const count = document.getElementById("charCount");
 box.addEventListener("input", () => (count.textContent = `${box.value.length}/280`));
+function clearBottomComposer() {
+  box.value = "";
+  count.textContent = "0/280";
+  pendingImage = null;
+  document.getElementById("imgPreviewWrap").classList.add("hidden");
+}
 
 document.getElementById("composerImage").addEventListener("change", async (e) => {
   const file = e.target.files[0];
@@ -384,54 +435,66 @@ document.getElementById("removeImg").addEventListener("click", () => {
 });
 
 document.getElementById("postBtn").addEventListener("click", async () => {
-  const text = box.value.trim();
-  if (!text && !pendingImage) {
-    toast("Write something kind or add an image first.");
-    return;
-  }
-  const community = document.getElementById("composerCommunity").value;
-  // Backend first (real shared post), local fallback otherwise
-  if (useBackend) {
-    try {
-      const { post } = await API().req("/api/posts", {
-        method: "POST", auth: true, body: { text, community, image: pendingImage },
-      });
-      const posts = getPosts();
-      posts.unshift(post);
-      savePosts(posts);
-      box.value = "";
-      count.textContent = "0/280";
-      pendingImage = null;
-      document.getElementById("imgPreviewWrap").classList.add("hidden");
-      renderFeed();
-      toast("Shared with your community.");
-      document.getElementById("feed").scrollIntoView({ behavior: "smooth", block: "start" });
-      return;
-    } catch (err) {
-      toast(err.message || "Backend unreachable — saved on this device only.");
-    }
-  }
-  const posts = getPosts();
-  posts.unshift({
-    id: Date.now(),
-    name: session.name,
-    time: "Just now",
-    ts: Date.now(),
+  await publishPost({
+    text: box.value.trim(),
     community: document.getElementById("composerCommunity").value,
-    tag: "Shared",
-    text: text.slice(0, 280) || "(shared a photo)",
     image: pendingImage,
-    ups: 1, downs: 0, userVote: 1, loves: 0, loved: false,
-    replies: [],
+    clear: clearBottomComposer,
   });
-  savePosts(posts);
-  box.value = "";
-  count.textContent = "0/280";
-  pendingImage = null;
-  document.getElementById("imgPreviewWrap").classList.add("hidden");
-  renderFeed();
-  toast("Shared with your community.");
-  document.getElementById("feed").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+// ---------- quick-post popup (floating button, no scrolling needed) ----------
+const quickText = document.getElementById("quickText");
+const quickCount = document.getElementById("quickCharCount");
+let quickPendingImage = null;
+
+function openCompose() {
+  document.getElementById("composeOverlay")?.classList.remove("hidden");
+  quickText?.focus();
+}
+function closeCompose() {
+  document.getElementById("composeOverlay")?.classList.add("hidden");
+  document.getElementById("composeFab")?.focus();
+}
+function clearQuickComposer() {
+  quickText.value = "";
+  quickCount.textContent = "0/280";
+  quickPendingImage = null;
+  document.getElementById("quickImgPreviewWrap")?.classList.add("hidden");
+  const fileInput = document.getElementById("quickImage");
+  if (fileInput) fileInput.value = "";
+}
+
+quickText?.addEventListener("input", () => (quickCount.textContent = `${quickText.value.length}/280`));
+document.getElementById("composeFab")?.addEventListener("click", openCompose);
+document.getElementById("composeClose")?.addEventListener("click", closeCompose);
+document.getElementById("composeOverlay")?.addEventListener("click", (e) => {
+  if (e.target.id === "composeOverlay") closeCompose();
+});
+document.getElementById("quickImage")?.addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    quickPendingImage = await fileToDataURL(file);
+    document.getElementById("quickImgPreview").src = quickPendingImage;
+    document.getElementById("quickImgPreviewWrap").classList.remove("hidden");
+  } catch (err) {
+    toast(err.message || "Couldn't read that image.");
+  }
+  e.target.value = "";
+});
+document.getElementById("quickRemoveImg")?.addEventListener("click", () => {
+  quickPendingImage = null;
+  document.getElementById("quickImgPreviewWrap").classList.add("hidden");
+});
+document.getElementById("quickPostBtn")?.addEventListener("click", async () => {
+  const ok = await publishPost({
+    text: quickText.value.trim(),
+    community: document.getElementById("quickCommunity").value,
+    image: quickPendingImage,
+    clear: clearQuickComposer,
+  });
+  if (ok) closeCompose();
 });
 
 // ---------- sort + communities ----------
@@ -476,6 +539,7 @@ document.addEventListener("keydown", (e) => {
   }
   if (e.key === "Escape") {
     if (notifOpen) { setNotifOpen(false); return; }
+    if (!document.getElementById("composeOverlay")?.classList.contains("hidden")) { closeCompose(); return; }
     document.getElementById("lightbox").classList.add("hidden");
     if (document.activeElement === searchInput && searchQuery) clearSearch();
     searchInput.blur();

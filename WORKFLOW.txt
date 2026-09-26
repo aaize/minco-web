@@ -20,7 +20,7 @@ Frontend (static, no framework):
   pages/guidelines.html    Safe-space rules
   assets/js/api.js         Backend client (auto-detects backend, offline fallback)
   assets/js/mood.js        Mood calendar widget (global popup)
-  assets/js/chat.js        Minco Helper chat widget (rule-based Wellness Q&A)
+  assets/js/mood.js        Mood calendar widget (global popup)
 
 Backend (backend/app.py, Flask + stdlib sqlite3, no ORM):
   Serves the frontend itself at / , /index.html, /pages/<name>, /assets/...
@@ -46,7 +46,7 @@ Once logged in (session gate on every private page):
   pages/home.html tabs: Feed | Safe space | Break | Meetings |
                         Resources | Check-in | Journal | Profile
   Top search bar ("/" focuses, Esc clears), notifications toast,
-  floating Mood button (bottom-left), floating Helper chat button.
+  floating Mood button (bottom-left), floating quick-post button (bottom-right).
 
 Login gate: each private JS file reads localStorage "minco_session";
 if missing -> window.location.replace("login.html").
@@ -237,18 +237,16 @@ Self-soothing tools, no login data stored:
   Memory match + Tic-tac-toe: casual distraction games.
   Check-in guidance cross-links here ("breathing exercises on the Break page").
 
-11. HELPER CHAT WORKFLOW (assets/js/chat.js + chat.css)
-------------------------------------------------------
-Floating Minco Helper widget (quick prompts: sleep, stress, motivation,
-calm down; history in localStorage "minco_chat_v1", max 60).
-Rule-based offline engine — crisis keywords ALWAYS checked first
-(suicide/kill myself/end my life/want to die/self-harm/hurt myself/
-cutting) -> crisis reply + emergency/helpline text. Other branches:
-panic/breathing, sleep, stress/anxiety, loneliness/sadness, motivation/
-focus, calm/grounding, thanks, greetings, who-are-you, medical/food
-(deflects to doctor/pharmacist), default fallback. Backend mirror:
-POST /api/chat {message<=500} -> {reply, crisis, provider:"offline-rules"}
-(swap point for a real LLM later; crisis check stays first, key server-side).
+11. QUICK-POST WORKFLOW (home.html floating button + home.js)
+-------------------------------------------------------------
+The Minco Helper bot was removed. In its place (bottom-right floating
+button, speech-bubble icon) is a quick-post button that opens a compose
+popup — same fields as the bottom composer (community select, 280-char
+text, image upload with preview, char count, Share). Both composers share
+one publishPost() in home.js (backend-first POST /api/posts, localStorage
+fallback, scrolls new post into view, closes popup on success).
+Popup closes via X, outside click, or Escape. NOTE: backend POST /api/chat
+rule engine still exists but has no frontend widget calling it.
 
 12. WELLNESS / SUPPORT / STATS APIs
 -----------------------------------
@@ -281,12 +279,12 @@ Journal ---------------> /api/journal CRUD ----------------> journal_entries
 Meetings --------------> /api/meetings + rsvp -------------> meetings,
                                                            meeting_rsvps
 Resources -------------> /api/resources CRUD --------------> resources
-  Chat box --------------> POST /api/chat (rules) -----------> (stateless)
+  Composer popup --------> POST /api/posts ---------------> posts
   Bell ------------------> GET /api/notifications ----------> notifications
                           POST /api/notifications/read (mark read)
 Any fetch fail --------> localStorage fallback keys: minco_posts_v2,
-  minco_moods_v1, minco_journal_v1, minco_users, minco_checkin_history,
-  minco_chat_v1 (check-in NEVER touches the network by design).
+  minco_moods_v1, minco_journal_v1, minco_users, minco_checkin_history
+  (check-in NEVER touches the network by design).
 
 NOTIFICATIONS WORKFLOW (home.html bell + home.js + notifications table)
 -----------------------------------------------------------------
@@ -308,9 +306,9 @@ post_id, preview<=80, created_at, read). Deleted with its post.
 ----------------------------------------
   - Guidelines page + checkbox gates (register, meetings, resources).
   - No medical advice/diagnosis language; "peer support, not professional
-    care" disclaimers on check-in, mood popup, chat, support API.
-  - Crisis triggers: check-in Q9>0, mood score 1 / low week, chat crisis
-    words -> crisis box with emergency number + US 988 + UK 116 123.
+    care" disclaimers on check-in, mood popup, and support API.
+  - Crisis triggers: check-in Q9>0, mood score 1 / low week
+    -> crisis box with emergency number + US 988 + UK 116 123.
   - Reporting: one report per user/post, reasons spam|unkind|unsafe|
     medical|other; owner-only deletes; anonymous display names allowed.
 
@@ -341,6 +339,6 @@ Env: HOST, PORT, DATABASE, FLASK_DEBUG / RENDER, AI_PROVIDER (future).
   Break/games         games.html            games.js              games.css
   Profile             profile.html          profile.js            profile.css
   Guidelines          guidelines.html       (static)              guidelines.css
-  Chat widget         (injected)            chat.js               chat.css
+  Quick-post popup    (on home.html)         (in home.js)            (in home.css)
   Shared              index.html            main.js/landing.js    main.css/landing.css
   Backend             backend/app.py        (Flask routes)        backend/minco.db
