@@ -1,0 +1,346 @@
+MINCO-WEB — WORKFLOW PROCESS
+============================
+A calm, safe peer-support community ("You're not alone").
+Plain HTML/CSS/JS frontend + Flask + SQLite backend.
+Live: https://aaize09.pythonanywhere.com | Demo: demo@minco.app / minco123
+
+1. SYSTEM OVERVIEW
+------------------
+Frontend (static, no framework):
+  index.html               Landing page (hero, features, 4 steps, CTA)
+  pages/register.html      Sign up
+  pages/login.html         Log in
+  pages/home.html          Feed (main user page)
+  pages/checkin.html       Wellbeing questionnaires + statistics dashboard
+  pages/journal.html       Private journal
+  pages/meetings.html      Awareness meetings board
+  pages/resources.html     Support library (articles / videos / podcasts)
+  pages/games.html         Break page (breathing, memory match, tic-tac-toe)
+  pages/profile.html       Profile (avatar, bio, posts, stats)
+  pages/guidelines.html    Safe-space rules
+  assets/js/api.js         Backend client (auto-detects backend, offline fallback)
+  assets/js/mood.js        Mood calendar widget (global popup)
+  assets/js/chat.js        Minco Helper chat widget (rule-based Wellness Q&A)
+
+Backend (backend/app.py, Flask + stdlib sqlite3, no ORM):
+  Serves the frontend itself at / , /index.html, /pages/<name>, /assets/...
+  All data endpoints under /api/...
+  Auth = Bearer token sessions, passwords hashed with scrypt.
+  DB file: backend/minco.db (git-ignored). Auto-created + seeded on boot.
+
+Core pattern used on EVERY page:
+  backend-first with silent localStorage fallback.
+  api.js checks GET /api/health (same-origin by default,
+  override via localStorage "minco_api_base"). If reachable AND a
+  token exists -> use Flask. Otherwise work fully offline on
+  localStorage demo data. The app never hard-crashes offline.
+
+2. NAVIGATION / USER JOURNEY
+---------------------------
+index.html
+  -> Get Started -> pages/register.html -> (success) -> pages/home.html
+  -> Log in      -> pages/login.html    -> (success) -> pages/home.html
+  -> Learn more  -> #how section on same page
+
+Once logged in (session gate on every private page):
+  pages/home.html tabs: Feed | Safe space | Break | Meetings |
+                        Resources | Check-in | Journal | Profile
+  Top search bar ("/" focuses, Esc clears), notifications toast,
+  floating Mood button (bottom-left), floating Helper chat button.
+
+Login gate: each private JS file reads localStorage "minco_session";
+if missing -> window.location.replace("login.html").
+
+3. AUTH WORKFLOW (register / login / session)
+--------------------------------------------
+REGISTER (pages/register.html + assets/js/auth.js):
+  1. User fills display name (2-30 chars), email, password (6+ chars,
+     live strength meter), confirm password, accepts guidelines checkbox.
+  2. Client validates inline (email regex, match, checkbox).
+  3. Try backend POST /api/register {name, email, password}
+     -> 201 {user, token} : save token (localStorage "minco_token"),
+        save session (localStorage "minco_session" {name, email, at}),
+        redirect to home.html.
+     -> 400/409 (bad name/email/password, email taken): show form error.
+     -> network fail: fall through to offline fallback.
+  4. Offline fallback: check localStorage "minco_users", reject duplicates,
+     append {name, email, password}, save session, redirect home.
+  5. If a valid token/session already exists, auth pages auto-skip to home.
+
+LOGIN (pages/login.html + assets/js/auth.js):
+  1. User fills email + password (+ "Fill demo" shortcut button).
+  2. Try backend POST /api/login {email, password}
+     -> 200 {user, token}: store token + session, redirect home.
+     -> 401 (wrong credentials): show error, do NOT silently fall back.
+     -> network fail: fall back to localStorage user match.
+  3. Offline fallback: match against "minco_users" (seeded with demo user);
+     success -> session + redirect; fail -> error + suggest demo login.
+  4. Token checked on later calls via Authorization: Bearer <token>.
+
+LOGOUT (home.js): POST /api/logout (auth) if backend, clear token +
+"minco_session", redirect to login.html.
+
+PROFILE EDIT (pages/profile.html, PUT /api/me, auth):
+  name (2-30), bio (<=150), avatar (data:image/... <=700KB).
+  Rename propagates to past posts/replies server-side.
+
+4. FEED / COMMUNITY WORKFLOW (pages/home.html + assets/js/home.js)
+------------------------------------------------------------------
+Seed: 4 starter posts (Ama, Jordan, Rae, Minco Team) if empty.
+Communities: calm, sleep, stress, wins. Sort: hot | new | top.
+Search: text + author + community + tag + reply text (all words must match,
+<mark> highlighted, debounced 150ms).
+
+View: GET /api/posts?sort=&community=&q=&mine= (auth optional).
+  Server returns up to 200 posts with replies, userVote/loved/saved/mine,
+  time-ago labels. Client filters/sorts again locally.
+
+Post: composer at BOTTOM ("Share something kind", 280 chars, optional
+  image downscaled to <=1000px JPEG via canvas, community dropdown).
+  Backend POST /api/posts (auth) -> prepend + scroll to feed.
+  Offline: unshift local post with id Date.now().
+
+Interact (one delegated listener on #feed):
+  Upvote/Downvote -> POST /api/posts/<id>/vote {value: 1|-1|0}, toggle-off
+    supported; score = ups - downs (+ loves*0.5 for hot sort).
+  Love (heart)    -> POST /api/posts/<id>/love (toggle). Liking someone
+    else's post creates a notification for its author (un-liking does not,
+    self-likes never notify).
+  Reply           -> POST /api/posts/<id>/replies {text<=200}. Replying to
+    someone else's post creates a notification for its author.
+  Share           -> copies link #post-<id> to clipboard + toast.
+  Save(bookmark)  -> POST /api/posts/<id>/save toggle; GET /api/saves lists.
+  Report          -> POST /api/posts/<id>/report {reason: spam|unkind|
+                     unsafe|medical|other, detail<=200}; one report per
+                     user/post (409 on repeat). GET /api/reports/mine.
+  Delete (own)    -> DELETE /api/posts/<id> (owner-only, cascades votes,
+                     loves, replies, saves, reports).
+
+5. MOOD CALENDAR WORKFLOW (assets/js/mood.js + mood.css, on home.html)
+----------------------------------------------------------------------
+Purpose: one-tap daily mood, private per account. Never a diagnosis.
+Moods: awful=1, low=2, okay=3, good=4, great=5 (+ optional 200-char note).
+
+Flow:
+  1. Widget injects floating calendar button (#moodFab, dot while today
+     missing) + modal popup (#moodOverlay: mood buttons, note box,
+     Save button, weekly score, 7-day dots, month calendar, care box).
+  2. On load: GET /api/moods?days=90 (auth) -> map by date + weekly
+     summary; fallback to localStorage "minco_moods_v1".
+  3. Auto-opens once per calendar day (~1.2s after login) if today's
+     mood is missing (tracked by localStorage "minco_mood_prompt").
+     Manual open via FAB; close via X, outside click, or Escape.
+  4. User picks a past/today date on the calendar (future disabled),
+     taps a mood, optional note, clicks Save:
+     POST /api/moods {date, mood, note} (upsert per user+date, rejects
+     future dates) or localStorage upsert offline.
+  5. On success: "Saved for today — thank you for checking in." shows,
+     weekly avg/dots/calendar re-render, popup AUTO-CLOSES after ~1.2s.
+  6. Weekly score = avg of last 7 calendar days. If avg < 2.5 (2+
+     check-ins) OR today's score == 1 -> professional-help care box
+     appears (GP/counsellor prompt, crisis lines US 988 / UK 116 123,
+     links to Resources + Meetings).
+Backend table: moods(user_id, date UNIQUE per user, mood, score, note).
+
+6. CHECK-IN QUESTIONNAIRE + STATISTICS WORKFLOW
+   (pages/checkin.html + assets/js/checkin.js + checkin.css)
+---------------------------------------------------------------
+PRIVACY: 100% on-device scoring. Answers are never sent to any server
+and never stored. Only an optional score history (date + score + band
++ per-question answers) lives in localStorage "minco_checkin_history"
+(max 30 entries). Peer support only — bands are reflection, NOT diagnosis.
+
+Questionnaires:
+  Low-mood check: 9 questions, 0-3 scale ("Not at all" .. "Nearly every
+    day", last 2 weeks), max 27. Bands: Minimal 0-4, Mild 5-9,
+    Moderate 10-14, Moderately severe 15-19, Severe 20-27.
+  Worry check: 7 questions, max 21. Bands: Minimal 0-4, Mild 5-9,
+    Moderate 10-14, Severe 15-21.
+  Tabs switch screeners (answers reset). Progress bar "X of N answered".
+
+Result flow:
+  1. "See my result" -> validates all answered (error + scrolls to first
+     missing). Sums score, finds band + tailored guidance text.
+  2. Result card shows score circle, band, "out of N" range, guidance,
+     animated fill bar. If low-mood Q9 (self-harm) > 0 -> crisis box
+     (emergency number, US 988, UK Samaritans 116 123).
+  3. Actions: Retake (reset), "Save to my history" (stores {screener,
+     name, score, max, band, crisis, ts, answers[ordered 0-3]},
+     dedupes double-save, re-renders stats), Resources, Meetings links.
+  4. "My past check-ins" list (newest first, last 10): date, name,
+     severity bar (band-colored), score/band. "Clear history" wipes it.
+
+Statistics dashboard ("My wellbeing insights", same page, below result):
+  Filters: scope Both|Low mood|Worry; range 30d|7d|All time.
+  Empty state explains how to save a first check-in.
+  a) Current snapshot: latest saved check-in -> color dot + "Band .
+     Name score/max", one-line interpretation, saved date, animated
+     0-100 wellbeing ring (100 - avg severity%).
+  b) KPI tiles: total check-ins (+streak), latest score (+date/band),
+     average severity% , trend label (linear-regression slope over
+     severity%: Improving/Steady/Rising, <2 entries = need more data).
+  c) Score-over-time: dependency-free canvas line chart (severity %,
+     mood=#6c5ce7, worry=#4fa3e3, gridlines 0/25/50/75/100, date labels).
+  d) Time-in-each-band: counts + % bars per band + streak line.
+  e) Per-question breakdown: Latest vs Average toggle; sorted worst-first,
+     "x.x/3" values, heaviest item highlighted. Both screeners shown when
+     scope=Both. Entries saved before answers existed show a retake hint.
+  f) Gentle insights: auto-written bullets — current picture, direction
+     (first->last %), heaviest area per screener, most-improved question,
+     crisis count nudge or professional-support suggestion, else
+     keep-noticing tip.
+
+7. PRIVATE JOURNAL WORKFLOW (pages/journal.html + journal.js)
+------------------------------------------------------------
+Per-account only, never shared. Fields: title (<=80), text (required,
+<=2000), mood tag (awful|low|okay|good|great, optional).
+Flow: login gate -> initBackend (GET /api/journal, else localStorage
+"minco_journal_v1") -> composer (New entry / Edit mode) -> Save
+(POST /api/journal or PUT /api/journal/<id>) -> list (newest first,
+search ?q filters title+text client-side, limit<=100) -> per-entry
+Edit (loads into composer) / Delete (confirm). Cross-user ids return
+404. Backend table: journal_entries(user_id, title, text, mood,
+created_at, updated_at).
+
+8. MEETINGS WORKFLOW (pages/meetings.html + meetings.js)
+--------------------------------------------------------
+Online awareness meetings board. Fields: title (3-80), topic
+(calm|sleep|stress|wins), future starts_at, duration 15-240 min,
+video link (http/https, <=500), description (<=500).
+Flow: list GET /api/meetings (upcoming/past split, live countdowns,
+re-render every minute) -> Host form (POST /api/meetings, auth +
+guidelines checkbox) -> cards with Join (opens link) + "I'm in" RSVP
+toggle (POST /api/meetings/<id>/rsvp, count updates) -> organiser-only
+Remove (DELETE /api/meetings/<id>, 403 otherwise).
+Tables: meetings(... rsvps count ...) + meeting_rsvps(meeting_id, user_id).
+
+9. RESOURCES WORKFLOW (pages/resources.html + resources.js)
+----------------------------------------------------------
+Support library. Kinds: article|video|podcast. Topics: calm|sleep|
+stress|wins. Seeded with 18 link-verified picks (NHS/WHO/HelpGuide/
+SleepFoundation articles, YouTube breathing/meditation, Spotify shows);
+seeds are NULL-owner so nobody can delete them; insert-if-missing BY URL
+so old DBs gain new seeds on boot.
+Flow: list GET /api/resources (filter kind tabs + topic + search on
+title+description) -> Articles open externally; YouTube/Spotify play
+INLINE in browser, else external button -> Share form (kind/topic/
+title 3-100/link/description<=500 + safety checkbox, POST /api/resources,
+auth) -> Remove own shares only (DELETE /api/resources/<id>, 403 otherwise).
+Table: resources(user_id NULL for seeds, name, kind, title, description,
+url, topic).
+
+10. BREAK / GAMES WORKFLOW (pages/games.html + games.js)
+-------------------------------------------------------
+Self-soothing tools, no login data stored:
+  Breathing: 4-4-6 Reset, Box Breathing, Quick Calm 4-6 (same presets as
+    GET /api/wellness/daily) with animated inhale/hold/exhale cycle.
+  Memory match + Tic-tac-toe: casual distraction games.
+  Check-in guidance cross-links here ("breathing exercises on the Break page").
+
+11. HELPER CHAT WORKFLOW (assets/js/chat.js + chat.css)
+------------------------------------------------------
+Floating Minco Helper widget (quick prompts: sleep, stress, motivation,
+calm down; history in localStorage "minco_chat_v1", max 60).
+Rule-based offline engine — crisis keywords ALWAYS checked first
+(suicide/kill myself/end my life/want to die/self-harm/hurt myself/
+cutting) -> crisis reply + emergency/helpline text. Other branches:
+panic/breathing, sleep, stress/anxiety, loneliness/sadness, motivation/
+focus, calm/grounding, thanks, greetings, who-are-you, medical/food
+(deflects to doctor/pharmacist), default fallback. Backend mirror:
+POST /api/chat {message<=500} -> {reply, crisis, provider:"offline-rules"}
+(swap point for a real LLM later; crisis check stays first, key server-side).
+
+12. WELLNESS / SUPPORT / STATS APIs
+-----------------------------------
+GET /api/wellness/daily (public, deterministic by date ordinal):
+  {date, affirmation (14 rotating), breathing (3 rotating), tip (7 rotating)}.
+GET /api/support (public): peer-support note + crisis list (Emergency,
+  US 988, UK Samaritans 116 123, CA 988, AU Lifeline 13 11 14,
+  International findahelpline.org) + links (Library, Meetings, Check-in).
+GET /api/stats/community (public): {users, posts, replies, loves,
+  meetingsUpcoming, resources}.
+GET /api/stats/me (auth): {posts, lovesReceived, repliesReceived,
+  lovesGiven, saved, rsvps, checkins, streakDays, karma} where
+  karma = posts*2 + lovesReceived*3 + repliesReceived; streak =
+  consecutive mood days ending today (or yesterday if today missing).
+GET /api/health (public): {ok:true, ai:"offline-rules"} — used by api.js
+  available() to decide backend vs offline mode.
+
+13. DATA FLOW SUMMARY
+---------------------
+Browser                    Flask (backend/app.py)           SQLite (minco.db)
+-------                    ----------------------           ------------------
+register/login form ---> POST /api/register|login ---> users + sessions(token)
+auth pages store token/session in localStorage ("minco_token",
+"minco_session"); later calls send Authorization: Bearer.
+Feed ------------------> GET/POST /api/posts, vote/love/replies/save/
+                         report/DELETE ------------------> posts, votes, loves,
+                         replies, saves, reports
+Mood popup ------------> POST|GET /api/moods --------------> moods
+Journal ---------------> /api/journal CRUD ----------------> journal_entries
+Meetings --------------> /api/meetings + rsvp -------------> meetings,
+                                                           meeting_rsvps
+Resources -------------> /api/resources CRUD --------------> resources
+  Chat box --------------> POST /api/chat (rules) -----------> (stateless)
+  Bell ------------------> GET /api/notifications ----------> notifications
+                          POST /api/notifications/read (mark read)
+Any fetch fail --------> localStorage fallback keys: minco_posts_v2,
+  minco_moods_v1, minco_journal_v1, minco_users, minco_checkin_history,
+  minco_chat_v1 (check-in NEVER touches the network by design).
+
+NOTIFICATIONS WORKFLOW (home.html bell + home.js + notifications table)
+-----------------------------------------------------------------
+Bell shows a count badge only when there are unread items; clicking opens
+a dropdown panel. Each item shows WHO acted + WHAT (truncated preview):
+  "Jordan replied to your post — 'Holding space for you, one breath…'"
+  "Rae liked your post — 'Got out for a 10-minute walk…'"
+Only replies and loves on YOUR posts notify (never your own actions,
+never votes/saves). Previews are truncated (~60 chars client-side).
+Clicking an item jumps to that post (expands its replies + highlights it).
+Opening the panel marks everything read (badge clears); "Mark all read"
+button does the same. Polls every 30s; a toast nudges on new arrivals.
+Offline fallback derives reply-only notifications from local posts
+(local loves carry counts, no actor names). Table:
+notifications(id, user_id=recipient, actor_id, actor_name, type=reply|love,
+post_id, preview<=80, created_at, read). Deleted with its post.
+
+14. SAFETY WORKFLOW (applies everywhere)
+----------------------------------------
+  - Guidelines page + checkbox gates (register, meetings, resources).
+  - No medical advice/diagnosis language; "peer support, not professional
+    care" disclaimers on check-in, mood popup, chat, support API.
+  - Crisis triggers: check-in Q9>0, mood score 1 / low week, chat crisis
+    words -> crisis box with emergency number + US 988 + UK 116 123.
+  - Reporting: one report per user/post, reasons spam|unkind|unsafe|
+    medical|other; owner-only deletes; anonymous display names allowed.
+
+15. RUN / DEPLOY WORKFLOW
+-------------------------
+Local dev:
+  cd backend && (.venv/bin/python app.py)  -> http://127.0.0.1:5000
+  (serves API + frontend; macOS AirPlay may occupy :5000 -> use :5100).
+  Frontend-only preview also works via file:// (offline demo mode).
+  Test: node --check assets/js/<file>.js; curl /api/health.
+Production (PythonAnywhere, no card, Python 3.10):
+  git push (Mac) -> ssh PA: cd ~/minco-web && git pull -> press Reload.
+  venv /home/aaize09/.virtualenvs/minco, WSGI file points at
+  backend/app.py (init_db runs at import for gunicorn too).
+  Live DB and local DB are SEPARATE. render.yaml kept as alternative host.
+Env: HOST, PORT, DATABASE, FLASK_DEBUG / RENDER, AI_PROVIDER (future).
+
+16. FILE MAP (where each workflow lives)
+----------------------------------------
+  Workflow            HTML                  JS                    CSS
+  Auth                login/register.html   auth.js               auth.css
+  Feed                home.html             home.js               home.css
+  Mood calendar       (widget on home)      mood.js               mood.css
+  Check-in + stats    checkin.html          checkin.js            checkin.css
+  Journal             journal.html          journal.js            journal.css
+  Meetings            meetings.html         meetings.js           meetings.css
+  Resources           resources.html        resources.js          resources.css
+  Break/games         games.html            games.js              games.css
+  Profile             profile.html          profile.js            profile.css
+  Guidelines          guidelines.html       (static)              guidelines.css
+  Chat widget         (injected)            chat.js               chat.css
+  Shared              index.html            main.js/landing.js    main.css/landing.css
+  Backend             backend/app.py        (Flask routes)        backend/minco.db

@@ -152,6 +152,17 @@ def init_db():
           created_at INTEGER NOT NULL,
           UNIQUE (user_id, date)
         );
+        CREATE TABLE IF NOT EXISTS notifications (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          actor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+          actor_name TEXT NOT NULL DEFAULT '',
+          type TEXT NOT NULL DEFAULT 'reply',
+          post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+          preview TEXT NOT NULL DEFAULT '',
+          created_at INTEGER NOT NULL,
+          read INTEGER NOT NULL DEFAULT 0
+        );
         """
     )
     # Migration for databases created before profiles existed
@@ -365,6 +376,30 @@ def time_ago(ts_ms):
     if h < 24:
         return f"{h}h ago"
     return f"{h // 24}d ago"
+
+
+def push_notification(recipient_id, actor_id, actor_name, ntype, post_id, preview):
+    """Record a reply/love notification. Skips self-actions and ownerless posts."""
+    if not recipient_id or recipient_id == actor_id:
+        return
+    try:
+        get_db().execute(
+            "INSERT INTO notifications (user_id, actor_id, actor_name, type, post_id, preview, created_at, read)"
+            " VALUES (?,?,?,?,?,?,?,0)",
+            (recipient_id, actor_id, (actor_name or "").strip()[:30],
+             ntype, post_id, (preview or "").strip()[:80], int(time.time() * 1000)),
+        )
+    except Exception:
+        pass  # notifications must never break the main action
+
+
+def notification_to_dict(n):
+    return {
+        "id": n["id"], "type": n["type"], "actor": n["actor_name"],
+        "postId": n["post_id"], "preview": n["preview"],
+        "ts": n["created_at"], "time": time_ago(n["created_at"]),
+        "read": bool(n["read"]),
+    }
 
 
 # ---------------- chat engine (offline rules; swap for LLM later) ----------------
@@ -639,9 +674,14 @@ def love(pid):
     if exists:
         db.execute("DELETE FROM loves WHERE post_id = ? AND user_id = ?", (pid, g.user["id"]))
         db.execute("UPDATE posts SET loves = loves - 1 WHERE id = ?", (pid,))
+        liked = False
     else:
         db.execute("INSERT INTO loves (post_id, user_id) VALUES (?,?)", (pid, g.user["id"]))
         db.execute("UPDATE posts SET loves = loves + 1 WHERE id = ?", (pid,))
+        liked = True
+    if liked:
+        push_notification(p["user_id"], g.user["id"], g.user["name"],
+                          "love", pid, (p["text"] or "")[:80])
     db.commit()
     p = db.execute("SELECT * FROM posts WHERE id = ?", (pid,)).fetchone()
     return jsonify({"post": post_to_dict(p, g.user["id"])})
@@ -655,12 +695,15 @@ def reply(pid):
     if not text:
         return jsonify({"error": "Reply can't be empty."}), 400
     db = get_db()
-    if not db.execute("SELECT 1 FROM posts WHERE id = ?", (pid,)).fetchone():
+    post = db.execute("SELECT * FROM posts WHERE id = ?", (pid,)).fetchone()
+    if not post:
         return jsonify({"error": "Post not found."}), 404
     db.execute(
         "INSERT INTO replies (post_id, user_id, name, text, created_at) VALUES (?,?,?,?,?)",
         (pid, g.user["id"], g.user["name"], text, int(time.time() * 1000)),
     )
+    push_notification(post["user_id"], g.user["id"], g.user["name"],
+                      "reply", pid, text[:80])
     db.commit()
     p = db.execute("SELECT * FROM posts WHERE id = ?", (pid,)).fetchone()
     return jsonify({"post": post_to_dict(p, g.user["id"])}), 201
@@ -681,6 +724,7 @@ def delete_post(pid):
     db.execute("DELETE FROM replies WHERE post_id = ?", (pid,))
     db.execute("DELETE FROM saves WHERE post_id = ?", (pid,))
     db.execute("DELETE FROM reports WHERE post_id = ?", (pid,))
+    db.execute("DELETE FROM notifications WHERE post_id = ?", (pid,))
     db.execute("DELETE FROM posts WHERE id = ?", (pid,))
     db.commit()
     return jsonify({"ok": True})
@@ -756,6 +800,54 @@ def my_reports():
         (g.user["id"],),
     ).fetchall()
     return jsonify({"reports": [dict(r) for r in rows]})
+
+
+@app.get("/api/notifications")
+@require_auth
+def list_notifications():
+    """Recent replies + loves on the current user's posts. Newest first."""
+    try:
+        limit = max(1, min(int(request.args.get("limit", 20)), 50))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid limit."}), 400
+    db = get_db()
+    rows = db.execute(
+        "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
+        (g.user["id"], limit),
+    ).fetchall()
+    unread = db.execute(
+        "SELECT COUNT(*) c FROM notifications WHERE user_id = ? AND read = 0",
+        (g.user["id"],),
+    ).fetchone()["c"]
+    return jsonify({"notifications": [notification_to_dict(n) for n in rows],
+                    "unread": unread})
+
+
+@app.post("/api/notifications/read")
+@require_auth
+def read_notifications():
+    """Mark notifications as read. Body {ids:[...]} optional — omits = mark all."""
+    data = request.get_json(force=True, silent=True) or {}
+    db = get_db()
+    ids = data.get("ids")
+    if isinstance(ids, list) and ids:
+        clean = [i for i in ids if isinstance(i, int)]
+        if not clean:
+            return jsonify({"ok": True, "unread": db.execute(
+                "SELECT COUNT(*) c FROM notifications WHERE user_id = ? AND read = 0",
+                (g.user["id"],)).fetchone()["c"]})
+        db.execute(
+            f"UPDATE notifications SET read = 1 WHERE user_id = ? AND id IN ({','.join('?' * len(clean))})",
+            (g.user["id"], *clean),
+        )
+    else:
+        db.execute("UPDATE notifications SET read = 1 WHERE user_id = ?", (g.user["id"],))
+    db.commit()
+    unread = db.execute(
+        "SELECT COUNT(*) c FROM notifications WHERE user_id = ? AND read = 0",
+        (g.user["id"],),
+    ).fetchone()["c"]
+    return jsonify({"ok": True, "unread": unread})
 
 
 def journal_to_dict(j):

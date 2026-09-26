@@ -37,6 +37,7 @@ async function pullFromBackend() {
   // Server shape already matches the local model
   savePosts(posts);
   renderFeed();
+  refreshNotifications().catch(() => {});
 }
 // Fire-and-forget mutation helper: run backend call, then refresh that post
 async function syncMutation(promise) {
@@ -474,18 +475,176 @@ document.addEventListener("keydown", (e) => {
     searchInput.focus();
   }
   if (e.key === "Escape") {
+    if (notifOpen) { setNotifOpen(false); return; }
     document.getElementById("lightbox").classList.add("hidden");
     if (document.activeElement === searchInput && searchQuery) clearSearch();
     searchInput.blur();
   }
 });
 
-// ---------- stories, notifs, lightbox, logout ----------
+// ---------- notifications: replies + loves on YOUR posts ----------
+let notifications = [];
+let notifFirstLoad = true;
+let notifOpen = false;
+
+const snippet = (s = "", n = 60) => {
+  const t = String(s ?? "").trim().replace(/\s+/g, " ");
+  return t.length > n ? t.slice(0, n - 1).trimEnd() + "…" : t;
+};
+const notifSeenKey = () => `minco_notif_seen_${session?.email || session?.name || "anon"}`;
+const getLastSeen = () => {
+  try { return Number(localStorage.getItem(notifSeenKey())) || 0; }
+  catch { return 0; }
+};
+const setLastSeen = (ts) => {
+  try { localStorage.setItem(notifSeenKey(), String(ts)); } catch {}
+};
+
+// Offline fallback: derive reply notifications from local posts.
+// (Local loves carry counts only, no actor names — replies only offline.)
+function localNotifications() {
+  const seen = getLastSeen();
+  const mine = getPosts().filter((p) => p.name === session.name);
+  const list = [];
+  mine.forEach((p) => {
+    (p.replies || []).forEach((r) => {
+      if (r.name === session.name) return; // only other people's activity
+      const ts = typeof r.id === "number" && r.id > 1e12 ? r.id : p.ts || Date.now();
+      list.push({
+        id: `local-${p.id}-${r.id}`, type: "reply", actor: r.name,
+        postId: p.id, preview: snippet(r.text, 60),
+        ts, time: timeAgo(ts), read: ts <= seen,
+      });
+    });
+  });
+  list.sort((a, b) => b.ts - a.ts);
+  return { notifications: list.slice(0, 20), unread: list.filter((n) => !n.read).length };
+}
+
+async function refreshNotifications() {
+  if (useBackend) {
+    try {
+      const data = await API().listNotifications(20);
+      notifications = (data.notifications || []).map((n) => ({
+        ...n, preview: snippet(n.preview, 60),
+      }));
+      const unread = data.unread ?? notifications.filter((n) => !n.read).length;
+      // Gentle nudge when something new arrives after first load
+      if (!notifFirstLoad && unread > 0) {
+        const prevIds = new Set(refreshNotifications._ids || []);
+        const fresh = notifications.filter((n) => !n.read && !prevIds.has(n.id))[0];
+        if (fresh) {
+          toast(fresh.type === "reply"
+            ? `${fresh.actor} replied to your post 💬`
+            : `${fresh.actor} liked your post ❤️`);
+        }
+      }
+      refreshNotifications._ids = notifications.map((n) => n.id);
+      notifFirstLoad = false;
+      renderNotifications(unread);
+      return;
+    } catch { /* fall through to local */ }
+  }
+  const local = localNotifications();
+  notifications = local.notifications;
+  if (!notifFirstLoad && local.unread > (refreshNotifications._localUnread || 0)) {
+    const fresh = notifications.filter((n) => !n.read)[0];
+    if (fresh) toast(`${fresh.actor} replied to your post 💬`);
+  }
+  refreshNotifications._localUnread = local.unread;
+  notifFirstLoad = false;
+  renderNotifications(local.unread);
+}
+
+function renderNotifications(unread) {
+  const dot = document.getElementById("notifDot");
+  const count = document.getElementById("notifCount");
+  const list = document.getElementById("notifList");
+  const n = unread ?? notifications.filter((x) => !x.read).length;
+  dot?.classList.toggle("hidden", n === 0);
+  if (count) {
+    count.textContent = n > 9 ? "9+" : String(n);
+    count.classList.toggle("hidden", n === 0);
+  }
+  document.getElementById("notifBtn")?.setAttribute("aria-label",
+    n ? `${n} unread notifications` : "Notifications");
+
+  if (!notifications.length) {
+    list.innerHTML = `<div class="notif-empty">No replies or likes on your posts yet.<br />Share something kind — support will find you. 💜</div>`;
+    return;
+  }
+  list.innerHTML = "";
+  notifications.forEach((item) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "notif-item" + (item.read ? "" : " unread");
+    b.dataset.type = item.type;
+    const verb = item.type === "reply" ? "replied to your post" : "liked your post";
+    const icon = item.type === "reply" ? "💬" : "❤️";
+    b.innerHTML = `<span class="notif-emoji">${icon}</span>` +
+      `<span class="notif-body"><span class="notif-text"><strong>${esc(item.actor)}</strong> ${verb}` +
+      `<span class="notif-preview">“${esc(item.preview)}”</span></span><br />` +
+      `<span class="notif-time">${esc(item.time || "")}</span></span>`;
+    b.addEventListener("click", () => jumpToPost(item.postId));
+    list.appendChild(b);
+  });
+}
+
+function setNotifOpen(open) {
+  notifOpen = open;
+  document.getElementById("notifPanel")?.classList.toggle("hidden", !open);
+  document.getElementById("notifBtn")?.setAttribute("aria-expanded", open ? "true" : "false");
+  if (open) markNotificationsRead(true); // viewing clears the badge
+}
+
+async function markNotificationsRead(silent = false) {
+  if (useBackend) {
+    try {
+      const data = await API().markNotificationsRead();
+      notifications = notifications.map((n) => ({ ...n, read: true }));
+      renderNotifications(data.unread ?? 0);
+      return;
+    } catch { if (!silent) toast("Couldn't update notifications."); return; }
+  }
+  // Offline: remember newest seen timestamp
+  const newest = notifications.length ? Math.max(...notifications.map((n) => n.ts)) : Date.now();
+  setLastSeen(newest);
+  notifications = notifications.map((n) => ({ ...n, read: true }));
+  renderNotifications(0);
+}
+
+function jumpToPost(postId) {
+  setNotifOpen(false);
+  const replies = document.getElementById(`replies-${postId}`);
+  const card = replies?.closest(".post");
+  if (card) {
+    replies.classList.remove("hidden");
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    card.style.transition = "box-shadow 0.3s ease";
+    card.style.boxShadow = "0 0 0 3px rgba(108, 92, 231, 0.45)";
+    setTimeout(() => { card.style.boxShadow = ""; }, 1600);
+  } else {
+    document.getElementById("feed")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+document.getElementById("notifBtn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  setNotifOpen(!notifOpen);
+});
+document.getElementById("notifReadAll")?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  markNotificationsRead();
+});
+document.addEventListener("click", (e) => {
+  if (notifOpen && !e.target.closest(".notif-wrap")) setNotifOpen(false);
+});
+
+// ---------- stories, lightbox, logout ----------
 document.getElementById("stories").addEventListener("click", (e) => {
   const s = e.target.closest(".story");
   if (s) toast(`Opening "${s.querySelector("small").textContent}" — coming alive soon.`);
 });
-document.getElementById("notifBtn").addEventListener("click", () => toast("3 kind replies on your posts. You're appreciated."));
 document.getElementById("lightboxClose").addEventListener("click", () =>
   document.getElementById("lightbox").classList.add("hidden")
 );
@@ -504,4 +663,9 @@ document.getElementById("logoutBtn").addEventListener("click", async () => {
 // init
 renderUser();
 renderFeed();
+refreshNotifications().catch(() => {});
 initBackend().catch(() => {});
+// Poll for new replies/loves while the page is open
+setInterval(() => {
+  if (!document.hidden) refreshNotifications().catch(() => {});
+}, 30000);

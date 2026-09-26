@@ -72,6 +72,9 @@
     reportPost: (id, reason, detail) =>
       req(`/api/posts/${id}/report`, { method: "POST", auth: true, body: { reason, detail } }),
     myReports: () => req("/api/reports/mine", { auth: true }),
+    listNotifications: (limit = 20) => req(`/api/notifications?limit=${limit}`, { auth: true }),
+    markNotificationsRead: (ids) =>
+      req("/api/notifications/read", { method: "POST", auth: true, body: ids ? { ids } : {} }),
     dailyWellness: () => req("/api/wellness/daily"),
     supportInfo: () => req("/api/support"),
     myStats: () => req("/api/stats/me", { auth: true }),
