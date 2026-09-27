@@ -55,7 +55,6 @@ async function syncMutation(promise) {
 let activeSort = "hot";       // hot | new | top
 let activeCommunity = "all";  // all | calm | sleep | stress | wins
 let searchQuery = "";         // live search text (lowercased, trimmed)
-let pendingImage = null;      // dataURL waiting to be posted
 
 // ---------- storage ----------
 const getPosts = () => {
@@ -176,6 +175,10 @@ function renderUser() {
   document.querySelectorAll("[data-user-initial]").forEach(
     (el) => (el.textContent = session.name[0].toUpperCase())
   );
+  const h = new Date().getHours();
+  const daypart = h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  const g = document.getElementById("greeting");
+  if (g) g.textContent = `${daypart}, ${session.name.split(" ")[0]}`;
   const mine = getPosts().filter((p) => p.name === session.name);
   const karma = mine.reduce((n, p) => n + (p.ups - p.downs + p.loves), 0);
   const k = document.getElementById("karmaCount");
@@ -211,7 +214,7 @@ function replyHTML(r) {
 
 function postHTML(p, i) {
   return `
-  <article class="post" style="animation-delay:${Math.min(i * 60, 400)}ms">
+  <article class="post">
     <div class="vote-rail">
       <button class="vote-btn up ${p.userVote === 1 ? "active" : ""}" data-act="up" data-id="${p.id}" title="Upvote">${ICON.up}</button>
       <span class="vote-score">${p.ups - p.downs}</span>
@@ -405,43 +408,6 @@ async function publishPost({ text, community, image, clear }) {
   document.getElementById("feed").scrollIntoView({ behavior: "smooth", block: "start" });
   return true;
 }
-
-// ---------- composer (bottom box) ----------
-const box = document.getElementById("composerText");
-const count = document.getElementById("charCount");
-box.addEventListener("input", () => (count.textContent = `${box.value.length}/280`));
-function clearBottomComposer() {
-  box.value = "";
-  count.textContent = "0/280";
-  pendingImage = null;
-  document.getElementById("imgPreviewWrap").classList.add("hidden");
-}
-
-document.getElementById("composerImage").addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  try {
-    pendingImage = await fileToDataURL(file);
-    document.getElementById("imgPreview").src = pendingImage;
-    document.getElementById("imgPreviewWrap").classList.remove("hidden");
-  } catch (err) {
-    toast(err.message || "Couldn't read that image.");
-  }
-  e.target.value = "";
-});
-document.getElementById("removeImg").addEventListener("click", () => {
-  pendingImage = null;
-  document.getElementById("imgPreviewWrap").classList.add("hidden");
-});
-
-document.getElementById("postBtn").addEventListener("click", async () => {
-  await publishPost({
-    text: box.value.trim(),
-    community: document.getElementById("composerCommunity").value,
-    image: pendingImage,
-    clear: clearBottomComposer,
-  });
-});
 
 // ---------- quick-post popup (floating button, no scrolling needed) ----------
 const quickText = document.getElementById("quickText");
@@ -704,11 +670,8 @@ document.addEventListener("click", (e) => {
   if (notifOpen && !e.target.closest(".notif-wrap")) setNotifOpen(false);
 });
 
-// ---------- stories, lightbox, logout ----------
-document.getElementById("stories").addEventListener("click", (e) => {
-  const s = e.target.closest(".story");
-  if (s) toast(`Opening "${s.querySelector("small").textContent}" — coming alive soon.`);
-});
+// ---------- welcome banner, lightbox, logout ----------
+document.getElementById("welcomePostBtn")?.addEventListener("click", openCompose);
 document.getElementById("lightboxClose").addEventListener("click", () =>
   document.getElementById("lightbox").classList.add("hidden")
 );

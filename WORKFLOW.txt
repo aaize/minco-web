@@ -86,6 +86,9 @@ PROFILE EDIT (pages/profile.html, PUT /api/me, auth):
 
 4. FEED / COMMUNITY WORKFLOW (pages/home.html + assets/js/home.js)
 ------------------------------------------------------------------
+Layout: slim sticky header (logo, search, bell, profile, logout) +
+  left sidebar nav (7 sections) + center feed (welcome banner, filter
+  toolbar, posts) + right care aside. No decorative stories row.
 Seed: 4 starter posts (Ama, Jordan, Rae, Minco Team) if empty.
 Communities: calm, sleep, stress, wins. Sort: hot | new | top.
 Search: text + author + community + tag + reply text (all words must match,
@@ -95,10 +98,11 @@ View: GET /api/posts?sort=&community=&q=&mine= (auth optional).
   Server returns up to 200 posts with replies, userVote/loved/saved/mine,
   time-ago labels. Client filters/sorts again locally.
 
-Post: composer at BOTTOM ("Share something kind", 280 chars, optional
-  image downscaled to <=1000px JPEG via canvas, community dropdown).
-  Backend POST /api/posts (auth) -> prepend + scroll to feed.
-  Offline: unshift local post with id Date.now().
+Post: via floating quick-post button (bottom-right) or "Write a post" in
+  the welcome banner — popup with community dropdown, 280-char text,
+  optional image (downscaled to <=1000px JPEG via canvas). One shared
+  publishPost(): backend POST /api/posts (auth) -> prepend + scroll to
+  feed. Offline: unshift local post with id Date.now().
 
 Interact (one delegated listener on #feed):
   Upvote/Downvote -> POST /api/posts/<id>/vote {value: 1|-1|0}, toggle-off
@@ -241,9 +245,9 @@ Self-soothing tools, no login data stored:
 -------------------------------------------------------------
 The Minco Helper bot was removed. In its place (bottom-right floating
 button, speech-bubble icon) is a quick-post button that opens a compose
-popup — same fields as the bottom composer (community select, 280-char
-text, image upload with preview, char count, Share). Both composers share
-one publishPost() in home.js (backend-first POST /api/posts, localStorage
+popup — same fields as the composer (community select, 280-char
+text, image upload with preview, char count, Share). One shared
+publishPost() in home.js (backend-first POST /api/posts, localStorage
 fallback, scrolls new post into view, closes popup on success).
 Popup closes via X, outside click, or Escape. NOTE: backend POST /api/chat
 rule engine still exists but has no frontend widget calling it.

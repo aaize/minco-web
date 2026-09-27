@@ -14,87 +14,95 @@
 </head>
 <body class="user-page">
 
-  <!-- Top app bar -->
+  <!-- Slim top bar: logo · search · notifications · profile · logout -->
   <header class="app-nav">
     <div class="container app-nav-inner">
       <a href="../index.html" class="logo">
         <img src="../assets/img/mincologo.png" alt="Minco logo" class="logo-img" />
         <span class="logo-text">Minco</span>
       </a>
-      <nav class="app-tabs">
-        <a href="#" class="app-tab active" title="User page">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
-          <span>Feed</span>
-        </a>
-        <a href="guidelines.html" class="app-tab" title="Safe space guidelines">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
-          <span>Safe space</span>
-        </a>
-        <a href="games.html" class="app-tab" title="Take a break">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12h8M12 8v8"/></svg>
-          <span>Break</span>
-        </a>
-        <a href="meetings.html" class="app-tab" title="Awareness meetings">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-          <span>Meetings</span>
-        </a>
-        <a href="resources.html" class="app-tab" title="Resource library">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-          <span>Resources</span>
-        </a>
-        <a href="checkin.html" class="app-tab" title="Wellbeing check-in">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14l2 2 4-4"/></svg>
-          <span>Check-in</span>
-        </a>
-        <a href="journal.html" class="app-tab" title="Private journal">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-          <span>Journal</span>
-        </a>
-      </nav>
       <div class="search-wrap">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
-        <input id="searchInput" type="search" placeholder="Search posts, people, c/communities...  ( / )" autocomplete="off" aria-label="Search posts" />
+        <input id="searchInput" type="search" placeholder="Search posts, people, communities…  ( / )" autocomplete="off" aria-label="Search posts" />
         <button id="clearSearch" class="hidden" aria-label="Clear search">✕</button>
       </div>
-      <div class="notif-wrap">
-        <button class="icon-btn" id="notifBtn" title="Notifications" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
-          <span class="dot hidden" id="notifDot"></span>
-          <span class="notif-count hidden" id="notifCount">0</span>
-        </button>
-        <div class="notif-panel hidden" id="notifPanel" role="menu" aria-label="Notifications">
-          <div class="notif-head">
-            <strong>Notifications</strong>
-            <button id="notifReadAll" type="button">Mark all read</button>
+      <div class="nav-actions">
+        <div class="notif-wrap">
+          <button class="icon-btn" id="notifBtn" title="Notifications" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+            <span class="dot hidden" id="notifDot"></span>
+            <span class="notif-count hidden" id="notifCount">0</span>
+          </button>
+          <div class="notif-panel hidden" id="notifPanel" role="menu" aria-label="Notifications">
+            <div class="notif-head">
+              <strong>Notifications</strong>
+              <button id="notifReadAll" type="button">Mark all read</button>
+            </div>
+            <div class="notif-list" id="notifList"></div>
           </div>
-          <div class="notif-list" id="notifList"></div>
         </div>
+        <a class="user-pill" href="profile.html" title="Your profile">
+          <span class="avatar" data-user-initial>M</span>
+          <span data-user-name>Member</span>
+        </a>
+        <button class="btn-logout" id="logoutBtn">Log out</button>
       </div>
-      <a class="user-pill" href="profile.html" title="Your profile">
-        <span class="avatar" data-user-initial>M</span>
-        <span data-user-name>Member</span>
-      </a>
-      <button class="btn-logout" id="logoutBtn">Log out</button>
     </div>
   </header>
 
-  <div class="app-layout">
-    <!-- Feed: everyone's posts, composer box at the bottom -->
-    <main class="feed-col">
-      <!-- Stories-style mood circles -->
-      <div class="stories" id="stories">
-        <div class="story"><span class="ring">🌅</span><small>Morning check</small></div>
-        <div class="story"><span class="ring">💤</span><small>Sleep circle</small></div>
-        <div class="story"><span class="ring">🌿</span><small>Calm room</small></div>
-        <div class="story"><span class="ring">🏆</span><small>Small wins</small></div>
-        <div class="story"><span class="ring">💬</span><small>Vent safely</small></div>
-      </div>
+  <div class="app-layout container">
+    <!-- Left: section navigation -->
+    <nav class="side-nav" aria-label="Sections">
+      <a href="#" class="app-tab active" title="User page">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+        <span>Feed</span>
+      </a>
+      <a href="guidelines.html" class="app-tab" title="Safe space guidelines">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+        <span>Safe space</span>
+      </a>
+      <a href="games.html" class="app-tab" title="Take a break">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12h8M12 8v8"/></svg>
+        <span>Break</span>
+      </a>
+      <a href="meetings.html" class="app-tab" title="Awareness meetings">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <span>Meetings</span>
+      </a>
+      <a href="resources.html" class="app-tab" title="Resource library">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span>Resources</span>
+      </a>
+      <a href="checkin.html" class="app-tab" title="Wellbeing check-in">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14l2 2 4-4"/></svg>
+        <span>Check-in</span>
+      </a>
+      <a href="journal.html" class="app-tab" title="Private journal">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+        <span>Journal</span>
+      </a>
+    </nav>
 
-      <!-- Sort tabs + community filter -->
-      <div class="sort-tabs" id="sortTabs">
-        <button class="active" data-sort="hot">🔥 Hot</button>
-        <button data-sort="new">✨ New</button>
-        <button data-sort="top">🏆 Top</button>
+    <!-- Center: welcome · filters · feed -->
+    <main class="feed-col">
+      <section class="welcome card">
+        <div>
+          <p class="welcome-hello" id="greeting">Welcome back</p>
+          <h1><span data-user-name>Member</span>, how are you feeling today?</h1>
+          <p class="welcome-sub">Check in with yourself, then see what the community is sharing.</p>
+        </div>
+        <div class="welcome-actions">
+          <button class="btn btn-primary btn-small" id="welcomePostBtn" type="button">✍️ Write a post</button>
+          <a class="btn btn-outline btn-small" href="checkin.html">💜 Check-in</a>
+        </div>
+      </section>
+
+      <section class="toolbar card" aria-label="Feed filters">
+        <div class="sort-tabs" id="sortTabs">
+          <button class="active" data-sort="hot">🔥 Hot</button>
+          <button data-sort="new">✨ New</button>
+          <button data-sort="top">🏆 Top</button>
+        </div>
         <select id="communityFilter" aria-label="Filter by community">
           <option value="all">All communities</option>
           <option value="calm">c/calm</option>
@@ -102,51 +110,16 @@
           <option value="stress">c/stress</option>
           <option value="wins">c/wins</option>
         </select>
-      </div>
+      </section>
 
       <div class="search-meta hidden" id="searchMeta"></div>
 
-      <!-- Everyone's posts render here -->
       <div class="feed" id="feed"></div>
-
-      <!-- Composer: your box at the bottom -->
-      <div class="feed-composer pop-in" id="composer">
-        <h3 class="composer-title">Share something kind</h3>
-        <div class="composer-top">
-          <span class="avatar" data-user-initial>M</span>
-          <select id="composerCommunity" aria-label="Choose community">
-            <option value="calm">c/calm</option>
-            <option value="sleep">c/sleep</option>
-            <option value="stress">c/stress</option>
-            <option value="wins">c/wins</option>
-          </select>
-        </div>
-        <textarea id="composerText" maxlength="280" placeholder="Share what's on your mind... (kind words only)"></textarea>
-        <div id="imgPreviewWrap" class="img-preview-wrap hidden">
-          <img id="imgPreview" alt="Upload preview" />
-          <button id="removeImg" type="button" aria-label="Remove image">✕</button>
-        </div>
-        <div class="composer-row">
-          <div class="composer-tools">
-            <label class="tool-btn" title="Add image">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-              <span>Image</span>
-              <input type="file" id="composerImage" accept="image/*" hidden />
-            </label>
-            <span class="char-count" id="charCount">0/280</span>
-          </div>
-          <button class="btn btn-primary btn-small" id="postBtn">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>
-            Share
-          </button>
-        </div>
-      </div>
-
     </main>
 
     <!-- Right: care cards -->
     <aside class="aside">
-      <div class="aside-card">
+      <div class="aside-card card">
         <h4>Community care</h4>
         <ul>
           <li>Be kind — no judgement</li>
@@ -156,14 +129,14 @@
         </ul>
         <a href="guidelines.html" class="btn btn-outline btn-small guide-cta">Read full guidelines</a>
       </div>
-      <div class="aside-card crisis">
+      <div class="aside-card card crisis">
         <h4>Need urgent help?</h4>
         <p>Minco is peer support, not crisis care. If you're in crisis, contact your local emergency number or crisis helpline right away.</p>
       </div>
     </aside>
   </div>
 
-  <!-- Quick post: floating button + popup (no more scrolling to the composer) -->
+  <!-- Quick post: floating button + popup -->
   <button class="compose-fab" id="composeFab" title="Write a post" aria-label="Write a post" aria-haspopup="dialog">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/><path d="M12 8v6M9 11h6"/></svg>
   </button>
