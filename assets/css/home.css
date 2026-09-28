@@ -204,6 +204,31 @@ mark { background: #ffe58a; color: inherit; border-radius: 4px; padding: 0 3px; 
 }
 .action-btn:hover { background: #e9e4fb; color: var(--ink); }
 .action-btn.loved { background: #ffe9ef; color: #d6336c; }
+.action-btn.owner { background: #eef0ff; }
+.action-btn.owner.danger { background: #fff; border-color: #f5c2c0; }
+.action-btn.owner.danger:hover { background: #fdecec; color: #b3261e; }
+.action-btn.save { background: var(--ink); color: #fff; }
+.mine-pill {
+  font-size: 0.7rem; font-weight: 800; background: #e9f6ec; color: #2e7d46;
+  padding: 2px 9px; border-radius: 999px;
+}
+
+/* ---------- Post edit mode ---------- */
+.post-edit-box { display: grid; gap: 10px; margin: 4px 0 10px; }
+.post-edit-community {
+  justify-self: start;
+  border: 1px solid var(--card-border); border-radius: 999px;
+  padding: 7px 12px; font-weight: 700; font-size: 0.85rem; font-family: inherit;
+  background: #f4f2ff; cursor: pointer; color: var(--ink);
+}
+.post-edit-text {
+  width: 100%; border: 1px solid var(--primary); border-radius: 14px;
+  padding: 12px 14px; font-family: inherit; font-size: 0.95rem; resize: vertical;
+  min-height: 90px; line-height: 1.6;
+}
+.post-edit-text:focus { outline: none; box-shadow: 0 0 0 3px rgba(108,92,231,0.15); }
+.post-edit-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.post-edit-btns { display: flex; gap: 8px; }
 
 /* Replies */
 .replies {

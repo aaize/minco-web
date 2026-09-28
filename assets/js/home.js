@@ -213,8 +213,9 @@ function replyHTML(r) {
 }
 
 function postHTML(p, i) {
+  const isMine = Boolean(p.mine) || p.name === session.name;
   return `
-  <article class="post">
+  <article class="post" data-post-id="${p.id}">
     <div class="vote-rail">
       <button class="vote-btn up ${p.userVote === 1 ? "active" : ""}" data-act="up" data-id="${p.id}" title="Upvote">${ICON.up}</button>
       <span class="vote-score">${p.ups - p.downs}</span>
@@ -224,6 +225,7 @@ function postHTML(p, i) {
       <div class="post-top">
         <span class="community-pill">c/${hi(p.community)}</span>
         <span class="post-meta">Posted by <strong>${hi(p.name)}</strong> · ${esc(timeAgo(p.ts))} · ${hi(p.tag)}</span>
+        ${isMine ? `<span class="mine-pill">yours</span>` : ""}
       </div>
       <p class="post-text">${hi(p.text)}</p>
       ${p.image ? `<img class="post-img" src="${p.image}" alt="Post image" loading="lazy" data-full="${p.image}" />` : ""}
@@ -231,6 +233,8 @@ function postHTML(p, i) {
         <button class="action-btn" data-act="toggle-replies" data-id="${p.id}">${ICON.comment} ${p.replies.length} ${p.replies.length === 1 ? "reply" : "replies"}</button>
         <button class="action-btn ${p.loved ? "loved" : ""}" data-act="love" data-id="${p.id}">${ICON.heart} ${p.loves}</button>
         <button class="action-btn" data-act="share" data-id="${p.id}">${ICON.share} Share</button>
+        ${isMine ? `<button class="action-btn owner" data-act="edit" data-id="${p.id}" title="Edit your post">✏️ Edit</button>
+        <button class="action-btn owner danger" data-act="delete" data-id="${p.id}" title="Delete your post">🗑️</button>` : ""}
       </div>
       <div class="replies ${p.replies.length ? "" : "hidden"}" id="replies-${p.id}">
         ${p.replies.map(replyHTML).join("")}
@@ -340,7 +344,111 @@ document.getElementById("feed").addEventListener("click", (e) => {
     navigator.clipboard?.writeText(`${location.href.split("?")[0]}#post-${id}`).catch(() => {});
     toast("Link copied — invite someone who needs this.");
   }
+  if (act === "edit") {
+    enterEditMode(id);
+  }
+  if (act === "cancel-edit") {
+    renderFeed();
+  }
+  if (act === "save-edit") {
+    saveEditMode(id, btn);
+  }
+  if (act === "delete") {
+    deletePostFlow(id, btn);
+  }
 });
+
+// ---------- edit / delete own posts ----------
+function enterEditMode(id) {
+  const post = getPosts().find((p) => p.id === id);
+  if (!post) return;
+  const card = document.querySelector(`article.post[data-post-id="${id}"]`);
+  if (!card || card.querySelector(".post-edit-box")) return; // already editing
+  const textEl = card.querySelector(".post-text");
+  if (!textEl) return;
+  const box = document.createElement("div");
+  box.className = "post-edit-box";
+  box.innerHTML = `
+    <select class="post-edit-community" aria-label="Choose community">
+      ${["calm", "sleep", "stress", "wins"].map((c) =>
+        `<option value="${c}" ${post.community === c ? "selected" : ""}>c/${c}</option>`).join("")}
+    </select>
+    <textarea class="post-edit-text" maxlength="280" rows="3"></textarea>
+    <div class="post-edit-row">
+      <span class="char-count post-edit-count">0/280</span>
+      <span class="post-edit-btns">
+        <button class="action-btn" data-act="cancel-edit" data-id="${post.id}">Cancel</button>
+        <button class="action-btn save" data-act="save-edit" data-id="${post.id}">Save</button>
+      </span>
+    </div>`;
+  textEl.replaceWith(box);
+  const ta = box.querySelector(".post-edit-text");
+  const count = box.querySelector(".post-edit-count");
+  ta.value = post.text || "";
+  count.textContent = `${ta.value.length}/280`;
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+  ta.addEventListener("input", () => (count.textContent = `${ta.value.length}/280`));
+}
+
+async function saveEditMode(id, btn) {
+  const card = document.querySelector(`article.post[data-post-id="${id}"]`);
+  if (!card) return;
+  const ta = card.querySelector(".post-edit-text");
+  const sel = card.querySelector(".post-edit-community");
+  const text = (ta?.value || "").trim().slice(0, 280);
+  const community = sel?.value || "calm";
+  if (!text) {
+    toast("Post can't be empty.");
+    ta?.focus();
+    return;
+  }
+  btn.disabled = true;
+  const posts = getPosts();
+  const post = posts.find((p) => p.id === id);
+  // Backend first for real ids, local fallback otherwise
+  if (useBackend && typeof id === "number" && id < 1e12) {
+    try {
+      const { post: updated } = await API().req(`/api/posts/${id}`, {
+        method: "PUT", auth: true, body: { text, community },
+      });
+      savePosts(posts.map((p) => (p.id === id ? updated : p)));
+      renderFeed();
+      toast("Post updated.");
+      return;
+    } catch (err) {
+      toast(err.message || "Couldn't update — try again.");
+      btn.disabled = false;
+      return;
+    }
+  }
+  if (post) {
+    post.text = text;
+    post.community = community;
+    savePosts(posts);
+  }
+  renderFeed();
+  toast("Post updated.");
+}
+
+async function deletePostFlow(id, btn) {
+  const post = getPosts().find((p) => p.id === id);
+  if (!post) return;
+  if (!window.confirm("Delete this post? Replies and loves go with it. This can't be undone.")) return;
+  if (btn) btn.disabled = true;
+  if (useBackend && typeof id === "number" && id < 1e12) {
+    try {
+      await API().deletePost(id);
+    } catch (err) {
+      toast(err.message || "Couldn't delete — try again.");
+      if (btn) btn.disabled = false;
+      return;
+    }
+  }
+  savePosts(getPosts().filter((p) => p.id !== id));
+  renderFeed();
+  toast("Post deleted.");
+}
 
 // Replies (submit delegates too)
 document.getElementById("feed").addEventListener("submit", (e) => {

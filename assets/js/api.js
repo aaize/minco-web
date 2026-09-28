@@ -66,6 +66,7 @@
   window.MincoAPI = {
     getBase, getToken, setToken, available, resetCache, req,
     // REST helpers (backend-first; caller falls back to localStorage if needed)
+    updatePost: (id, patch) => req(`/api/posts/${id}`, { method: "PUT", auth: true, body: patch }),
     deletePost: (id) => req(`/api/posts/${id}`, { method: "DELETE", auth: true }),
     toggleSave: (id) => req(`/api/posts/${id}/save`, { method: "POST", auth: true }),
     getSaved: () => req("/api/saves", { auth: true }),

@@ -106,6 +106,60 @@ a { text-decoration: none; color: inherit; }
 .reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.7s ease, transform 0.7s ease; }
 .reveal.visible { opacity: 1; transform: none; }
 
+/* ---------- SOS safety button (global, injected by sos.js) ---------- */
+.sos-fab {
+  position: fixed; left: 22px; bottom: 92px; z-index: 69;
+  display: flex; align-items: center; gap: 8px;
+  border: 2px solid #fff; cursor: pointer;
+  background: linear-gradient(135deg, #e63946, #b3261e);
+  color: #fff; font-weight: 800; font-size: 0.85rem; font-family: inherit;
+  padding: 11px 16px 11px 12px; border-radius: 999px;
+  box-shadow: 0 12px 30px rgba(179, 38, 30, 0.45);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.sos-fab:hover { transform: translateY(-2px); box-shadow: 0 16px 38px rgba(179, 38, 30, 0.55); }
+.sos-fab-icon {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center; flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.22); font-size: 1rem;
+}
+.sos-overlay {
+  position: fixed; inset: 0; z-index: 90;
+  background: rgba(15, 12, 30, 0.6); backdrop-filter: blur(6px);
+  display: grid; place-items: center; padding: 20px;
+}
+.sos-overlay.hidden { display: none; }
+.sos-panel {
+  width: min(440px, calc(100vw - 32px)); max-height: min(620px, calc(100dvh - 60px));
+  overflow-y: auto; background: #fff;
+  border-radius: 22px; box-shadow: var(--shadow);
+  border: 1px solid var(--card-border); padding: 22px;
+}
+.sos-panel h2 { font-size: 1.2rem; margin-bottom: 4px; }
+.sos-sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 14px; }
+.sos-note {
+  background: linear-gradient(135deg, #fff5f5, #ffe9e9);
+  border: 1px solid #f5c2c0; border-radius: 14px;
+  padding: 12px 14px; font-size: 0.88rem; color: #7a1f1a; margin-bottom: 14px;
+}
+.sos-list { list-style: none; display: grid; gap: 8px; margin-bottom: 14px; }
+.sos-list a, .sos-list div.sos-row {
+  display: flex; align-items: center; gap: 10px;
+  background: #f7f5ff; border: 1px solid var(--card-border);
+  border-radius: 14px; padding: 10px 14px;
+  font-size: 0.9rem; font-weight: 600;
+}
+.sos-list a:hover { background: #efedff; }
+.sos-list small { display: block; color: var(--muted); font-weight: 500; font-size: 0.8rem; }
+.sos-links { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.sos-head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 4px; }
+.sos-head button {
+  margin-left: auto; width: 32px; height: 32px; flex-shrink: 0;
+  border-radius: 50%; border: 1px solid var(--card-border);
+  background: #fff; cursor: pointer; font-weight: 800;
+}
+.sos-head button:hover { background: #f0efff; }
+
 @media (max-width: 900px) {
   .menu-btn { display: flex; }
   .nav-links {

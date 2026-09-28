@@ -709,6 +709,36 @@ def reply(pid):
     return jsonify({"post": post_to_dict(p, g.user["id"])}), 201
 
 
+@app.put("/api/posts/<int:pid>")
+@require_auth
+def update_post(pid):
+    data = request.get_json(force=True, silent=True) or {}
+    text = (data.get("text") or "").strip()[:280]
+    community = (data.get("community") or "").lower().strip()
+    db = get_db()
+    p = db.execute("SELECT * FROM posts WHERE id = ?", (pid,)).fetchone()
+    if not p:
+        return jsonify({"error": "Post not found."}), 404
+    if p["user_id"] != g.user["id"]:
+        return jsonify({"error": "Only the author can edit this post."}), 403
+    updates = {}
+    if "text" in data:
+        if not text:
+            return jsonify({"error": "Post text can't be empty."}), 400
+        updates["text"] = text
+    if "community" in data:
+        if community not in COMMUNITIES:
+            return jsonify({"error": "Unknown community."}), 400
+        updates["community"] = community
+    if not updates:
+        return jsonify({"error": "Nothing to update."}), 400
+    sets = ", ".join(f"{k} = ?" for k in updates)
+    db.execute(f"UPDATE posts SET {sets} WHERE id = ?", (*updates.values(), pid))
+    db.commit()
+    p = db.execute("SELECT * FROM posts WHERE id = ?", (pid,)).fetchone()
+    return jsonify({"post": post_to_dict(p, g.user["id"])})
+
+
 @app.delete("/api/posts/<int:pid>")
 @require_auth
 def delete_post(pid):

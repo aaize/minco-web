@@ -17,6 +17,7 @@ const API = () => window.MincoAPI;
 let useBackend = false;
 let me = { name: session.name, email: session.email, bio: "", avatar: "", joined: null };
 let allPosts = [];
+let myStats = null; // GET /api/stats/me when backend is on
 let activeTab = "posts";
 let pendingAvatar = null; // dataURL chosen in the edit form, not yet saved
 
@@ -46,6 +47,11 @@ async function initBackend() {
     const { posts } = await API().req("/api/posts", { auth: true });
     allPosts = posts;
     savePosts(posts);
+    try {
+      myStats = await API().myStats();
+    } catch {
+      myStats = null;
+    }
   } catch {
     useBackend = false;
   }
@@ -62,6 +68,40 @@ function loadLocal() {
 const myPosts = () => useBackend ? allPosts.filter((p) => p.mine) : allPosts.filter((p) => p.name === me.name);
 const supportedPosts = () => allPosts.filter((p) => p.loved);
 const karmaOf = (posts) => posts.reduce((n, p) => n + (p.ups - p.downs + p.loves), 0);
+
+// Offline streak: consecutive mood days ending today (or yesterday) from local moods
+function localStreak() {
+  try {
+    const moods = JSON.parse(localStorage.getItem("minco_moods_v1")) || {};
+    const pad = (n) => String(n).padStart(2, "0");
+    const key = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    let day = new Date();
+    if (!moods[key(day)]) day.setDate(day.getDate() - 1);
+    let streak = 0;
+    while (moods[key(day)]) {
+      streak++;
+      day.setDate(day.getDate() - 1);
+    }
+    return streak;
+  } catch {
+    return 0;
+  }
+}
+
+function badgesFor({ posts, karma, streak, lovesRx, repliesRx }) {
+  const badges = [];
+  if (posts >= 1) badges.push({ icon: "✍️", label: "First share", cls: "" });
+  if (posts >= 5) badges.push({ icon: "📣", label: "Regular sharer", cls: "green" });
+  if (posts >= 15) badges.push({ icon: "🌳", label: "Rooted member", cls: "green" });
+  if (karma >= 10) badges.push({ icon: "💜", label: "Kind heart", cls: "pink" });
+  if (karma >= 30) badges.push({ icon: "🌟", label: "Community glow", cls: "gold" });
+  if (karma >= 75) badges.push({ icon: "🏵️", label: "Beacon", cls: "gold" });
+  if (streak >= 2) badges.push({ icon: "🔥", label: `${streak}-day check-in`, cls: streak >= 7 ? "gold" : "" });
+  if (lovesRx >= 5) badges.push({ icon: "💌", label: `${lovesRx} hearts`, cls: "pink" });
+  if (repliesRx >= 5) badges.push({ icon: "💬", label: `${repliesRx} replies`, cls: "" });
+  if (!badges.length) badges.push({ icon: "🌱", label: "New here — badges grow as you share kindly", cls: "" });
+  return badges;
+}
 
 // ---------- render ----------
 function avatarHTML() {
@@ -85,9 +125,21 @@ function renderHeader() {
       ? `Member since ${new Date(me.joined).toLocaleDateString(undefined, { month: "long", year: "numeric" })} · c/calm, c/sleep, c/stress, c/wins`
       : "Safe space member";
   const mine = myPosts();
-  document.getElementById("statPosts").textContent = mine.length;
-  document.getElementById("statKarma").textContent = karmaOf(mine);
+  const posts = myStats?.posts ?? mine.length;
+  const karma = myStats?.karma ?? karmaOf(mine);
+  const streak = myStats?.streakDays ?? localStreak();
+  const lovesRx = myStats?.lovesReceived ?? mine.reduce((n, p) => n + (p.loves || 0), 0);
+  const repliesRx = myStats?.repliesReceived ?? mine.reduce((n, p) => n + (p.replies?.length || 0), 0);
+  document.getElementById("statPosts").textContent = posts;
+  document.getElementById("statKarma").textContent = karma;
+  document.getElementById("statStreak").textContent = streak;
   document.getElementById("statSupported").textContent = supportedPosts().length;
+  const badgeRow = document.getElementById("badgeRow");
+  if (badgeRow) {
+    badgeRow.innerHTML = badgesFor({ posts, karma, streak, lovesRx, repliesRx })
+      .map((b) => `<span class="badge-pill ${b.cls}">${esc(b.icon)} ${esc(b.label)}</span>`)
+      .join("");
+  }
 }
 
 function miniPostHTML(p) {
@@ -122,6 +174,13 @@ function renderTab() {
       : `<div class="empty-tab"><h3>Nothing supported yet</h3><p>Tap the ♥ on kind posts in the feed and they'll collect here.</p><a href="home.html" class="btn btn-small btn-primary">Find kind posts</a></div>`;
   } else {
     const communities = [...new Set(myPosts().map((p) => `c/${p.community}`))].join(" · ") || "—";
+    const statsGrid = myStats ? `
+    <div class="stat-grid">
+      <div class="stat-tile"><strong>${myStats.lovesReceived ?? 0}</strong><span>hearts received</span></div>
+      <div class="stat-tile"><strong>${myStats.repliesReceived ?? 0}</strong><span>replies received</span></div>
+      <div class="stat-tile"><strong>${myStats.checkins ?? 0}</strong><span>mood check-ins</span></div>
+      <div class="stat-tile"><strong>${myStats.streakDays ?? 0}</strong><span>day streak</span></div>
+    </div>` : "";
     box.innerHTML = `
     <div class="about-card">
       <div class="about-row"><strong>Display name</strong><span>${esc(me.name)}</span></div>
@@ -129,6 +188,7 @@ function renderTab() {
       <div class="about-row"><strong>Email</strong><span class="private">${esc(me.email)} (only you can see this)</span></div>
       <div class="about-row"><strong>Member since</strong><span>${me.joined ? esc(new Date(me.joined).toLocaleDateString(undefined, { month: "long", year: "numeric" })) : "—"}</span></div>
       <div class="about-row"><strong>Active in</strong><span>${esc(communities)}</span></div>
+      ${statsGrid}
     </div>`;
   }
 }
