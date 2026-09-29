@@ -85,5 +85,8 @@
     getJournal: (id) => req(`/api/journal/${id}`, { auth: true }),
     updateJournal: (id, entry) => req(`/api/journal/${id}`, { method: "PUT", auth: true, body: entry }),
     deleteJournal: (id) => req(`/api/journal/${id}`, { method: "DELETE", auth: true }),
+    toggleResourceSave: (id) => req(`/api/resources/${id}/save`, { method: "POST", auth: true }),
+    rateResource: (id, stars) =>
+      req(`/api/resources/${id}/rate`, { method: "POST", auth: true, body: { stars } }),
   };
 })();

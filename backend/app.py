@@ -142,6 +142,19 @@ def init_db():
           topic TEXT NOT NULL DEFAULT 'calm',
           created_at INTEGER NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS resource_saves (
+          resource_id INTEGER NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          created_at INTEGER NOT NULL,
+          PRIMARY KEY (resource_id, user_id)
+        );
+        CREATE TABLE IF NOT EXISTS resource_ratings (
+          resource_id INTEGER NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          stars INTEGER NOT NULL,
+          created_at INTEGER NOT NULL,
+          PRIMARY KEY (resource_id, user_id)
+        );
         CREATE TABLE IF NOT EXISTS moods (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -1090,11 +1103,36 @@ RESOURCE_KINDS = {"article", "video", "podcast"}
 
 
 def resource_to_dict(r, viewer_id=None):
+    db = get_db()
+    saves = db.execute(
+        "SELECT COUNT(*) c FROM resource_saves WHERE resource_id = ?", (r["id"],)
+    ).fetchone()["c"]
+    agg = db.execute(
+        "SELECT COUNT(*) n, COALESCE(AVG(stars), 0) avg FROM resource_ratings WHERE resource_id = ?",
+        (r["id"],),
+    ).fetchone()
+    saved, my_rating = False, 0
+    if viewer_id:
+        saved = (
+            db.execute(
+                "SELECT 1 FROM resource_saves WHERE resource_id = ? AND user_id = ?",
+                (r["id"], viewer_id),
+            ).fetchone()
+            is not None
+        )
+        row = db.execute(
+            "SELECT stars FROM resource_ratings WHERE resource_id = ? AND user_id = ?",
+            (r["id"], viewer_id),
+        ).fetchone()
+        my_rating = row["stars"] if row else 0
     return {
         "id": r["id"], "name": r["name"], "kind": r["kind"], "title": r["title"],
         "description": r["description"], "url": r["url"], "topic": r["topic"],
         "mine": bool(viewer_id) and r["user_id"] == viewer_id,
         "ts": r["created_at"],
+        "saves": saves, "saved": saved,
+        "ratingAvg": round(agg["avg"] or 0, 1), "ratingCount": agg["n"],
+        "myRating": my_rating,
     }
 
 
@@ -1105,6 +1143,8 @@ def list_resources():
     kind = (request.args.get("kind") or "all").lower()
     topic = (request.args.get("topic") or "all").lower()
     q = (request.args.get("q") or "").lower().strip()
+    sort = (request.args.get("sort") or "new").lower()
+    saved_only = request.args.get("saved") == "1"
     db = get_db()
     rows = db.execute("SELECT * FROM resources ORDER BY created_at DESC LIMIT 200").fetchall()
     out = [resource_to_dict(r, viewer_id) for r in rows]
@@ -1112,10 +1152,16 @@ def list_resources():
         out = [r for r in out if r["kind"] == kind]
     if topic in COMMUNITIES:
         out = [r for r in out if r["topic"] == topic]
+    if saved_only:
+        if not viewer_id:
+            return jsonify({"error": "Login required"}), 401
+        out = [r for r in out if r["saved"]]
     if q:
         words = q.split()
         out = [r for r in out if all(
             w in (r["title"] + " " + r["description"]).lower() for w in words)]
+    if sort == "top":
+        out.sort(key=lambda r: (r["ratingAvg"], r["ratingCount"], r["saves"]), reverse=True)
     return jsonify({"resources": out})
 
 
@@ -1150,6 +1196,65 @@ def create_resource():
     return jsonify({"resource": resource_to_dict(r, g.user["id"])}), 201
 
 
+@app.post("/api/resources/<int:rid>/save")
+@require_auth
+def toggle_resource_save(rid):
+    db = get_db()
+    r = db.execute("SELECT * FROM resources WHERE id = ?", (rid,)).fetchone()
+    if not r:
+        return jsonify({"error": "Resource not found."}), 404
+    exists = db.execute(
+        "SELECT 1 FROM resource_saves WHERE resource_id = ? AND user_id = ?",
+        (rid, g.user["id"]),
+    ).fetchone()
+    if exists:
+        db.execute(
+            "DELETE FROM resource_saves WHERE resource_id = ? AND user_id = ?",
+            (rid, g.user["id"]),
+        )
+        saved = False
+    else:
+        db.execute(
+            "INSERT INTO resource_saves (resource_id, user_id, created_at) VALUES (?,?,?)",
+            (rid, g.user["id"], int(time.time() * 1000)),
+        )
+        saved = True
+    db.commit()
+    r = db.execute("SELECT * FROM resources WHERE id = ?", (rid,)).fetchone()
+    out = resource_to_dict(r, g.user["id"])
+    return jsonify({"saved": saved, "saves": out["saves"], "resource": out})
+
+
+@app.post("/api/resources/<int:rid>/rate")
+@require_auth
+def rate_resource(rid):
+    data = request.get_json(force=True, silent=True) or {}
+    try:
+        stars = int(data.get("stars", 0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Pick 1–5 stars (0 clears your rating)."}), 400
+    if stars not in (0, 1, 2, 3, 4, 5):
+        return jsonify({"error": "Pick 1–5 stars (0 clears your rating)."}), 400
+    db = get_db()
+    r = db.execute("SELECT * FROM resources WHERE id = ?", (rid,)).fetchone()
+    if not r:
+        return jsonify({"error": "Resource not found."}), 404
+    if stars == 0:
+        db.execute(
+            "DELETE FROM resource_ratings WHERE resource_id = ? AND user_id = ?",
+            (rid, g.user["id"]),
+        )
+    else:
+        db.execute(
+            "INSERT INTO resource_ratings (resource_id, user_id, stars, created_at) VALUES (?,?,?,?)"
+            " ON CONFLICT(resource_id, user_id) DO UPDATE SET stars=excluded.stars",
+            (rid, g.user["id"], stars, int(time.time() * 1000)),
+        )
+    db.commit()
+    r = db.execute("SELECT * FROM resources WHERE id = ?", (rid,)).fetchone()
+    return jsonify({"resource": resource_to_dict(r, g.user["id"])})
+
+
 @app.delete("/api/resources/<int:rid>")
 @require_auth
 def delete_resource(rid):
@@ -1159,6 +1264,9 @@ def delete_resource(rid):
         return jsonify({"error": "Resource not found."}), 404
     if r["user_id"] != g.user["id"]:
         return jsonify({"error": "Only the person who shared it can remove it."}), 403
+    # Manual cascade (SQLite FKs off by default)
+    db.execute("DELETE FROM resource_saves WHERE resource_id = ?", (rid,))
+    db.execute("DELETE FROM resource_ratings WHERE resource_id = ?", (rid,))
     db.execute("DELETE FROM resources WHERE id = ?", (rid,))
     db.commit()
     return jsonify({"ok": True})

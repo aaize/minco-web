@@ -96,6 +96,7 @@
         <button data-kind="article">📄 Articles</button>
         <button data-kind="video">🎥 Videos</button>
         <button data-kind="podcast">🎙️ Podcasts</button>
+        <button data-kind="saved">🔖 Saved</button>
       </div>
       <div class="filter-row">
         <select id="topicFilter" aria-label="Filter by topic">
@@ -104,6 +105,11 @@
           <option value="sleep">c/sleep</option>
           <option value="stress">c/stress</option>
           <option value="wins">c/wins</option>
+        </select>
+        <select id="sortSel" aria-label="Sort resources">
+          <option value="new">Newest</option>
+          <option value="top">Top rated</option>
+          <option value="saved">Most saved</option>
         </select>
         <input id="searchBox" type="search" placeholder="Search resources…" aria-label="Search resources" />
       </div>

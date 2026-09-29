@@ -36,6 +36,26 @@
   padding: 26px 28px;
 }
 .journal-form-card h2, .journal-list-card h2 { font-size: 1.15rem; margin-bottom: 12px; }
+
+/* ---------- Prompt bar ---------- */
+.prompt-bar {
+  background: linear-gradient(135deg, #f4f1ff, #eef4ff);
+  border: 1px solid var(--card-border);
+  border-radius: 14px; padding: 14px 16px; margin-bottom: 14px;
+}
+.prompt-label { font-size: 0.8rem; font-weight: 800; color: var(--primary-dark); text-transform: uppercase; letter-spacing: 0.05em; }
+.prompt-text { font-size: 0.95rem; font-style: italic; margin: 6px 0 10px; }
+.prompt-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---------- Mood link + exports ---------- */
+.mood-link {
+  display: flex; gap: 10px; align-items: flex-start;
+  font-size: 0.86rem; color: var(--muted); margin: 10px 0 2px; cursor: pointer; line-height: 1.5;
+}
+.mood-link input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--primary); flex-shrink: 0; }
+.export-btns { display: flex; gap: 6px; }
+.export-btns .btn { padding: 7px 12px; font-size: 0.8rem; }
+.journal-saved-msg { margin-top: 8px; font-size: 0.85rem; color: var(--primary-dark); font-weight: 700; min-height: 1.2em; }
 .journal-form-card input, .journal-form-card textarea, .journal-list-head input {
   width: 100%; font-family: inherit; font-size: 0.95rem;
   border: 1px solid var(--card-border); border-radius: 12px;
