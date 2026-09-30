@@ -1486,11 +1486,48 @@ def stats_me():
     })
 
 
+# ---------------- security headers (defence in depth) ----------------
+@app.after_request
+def set_security_headers(resp):
+    # Block MIME sniffing; keep the app unframeable (clickjacking);
+    # minimal referrer + device-feature exposure for a peer-support app.
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    resp.headers.setdefault(
+        "Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
+    # CSP is deliberately lenient: the library embeds YouTube/Spotify
+    # players and user images (data:/https:). Tighten per-route if needed.
+    resp.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: blob: https:; "
+        "media-src 'self' blob: https:; "
+        "frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com https://open.spotify.com; "
+        "connect-src 'self' http://127.0.0.1:* http://localhost:* https:; "
+        "font-src 'self' data:; base-uri 'self'; form-action 'self'",
+    )
+    return resp
+
+
 # ---------------- serve frontend (one-command demo) ----------------
 @app.get("/")
 @app.get("/index.html")  # logo links point at ../index.html — serve it too
 def serve_index():
     return send_from_directory(WEB_DIR, "index.html")
+
+
+@app.get("/sw.js")
+def serve_sw():
+    return send_from_directory(WEB_DIR, "sw.js", mimetype="application/javascript")
+
+
+@app.get("/manifest.webmanifest")
+def serve_manifest():
+    return send_from_directory(
+        WEB_DIR, "manifest.webmanifest", mimetype="application/manifest+json")
 
 
 @app.get("/pages/<path:name>")

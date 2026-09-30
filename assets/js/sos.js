@@ -115,4 +115,35 @@
   document.readyState === "loading"
     ? document.addEventListener("DOMContentLoaded", build)
     : build();
+
+  // ---------- PWA: manifest + theme-color + service worker ----------
+  // sos.js loads on every page, so one registration covers the whole app.
+  try {
+    const prefix = basePrefix();
+    if (!document.querySelector('link[rel="manifest"]')) {
+      const link = document.createElement("link");
+      link.rel = "manifest";
+      link.href = `${prefix === "../" ? "/manifest.webmanifest" : "manifest.webmanifest"}`;
+      document.head.appendChild(link);
+    }
+    if (!document.querySelector('meta[name="theme-color"]')) {
+      const meta = document.createElement("meta");
+      meta.name = "theme-color";
+      meta.content = "#6c5ce7";
+      document.head.appendChild(meta);
+    }
+    if (!document.querySelector('link[rel="apple-touch-icon"]')) {
+      const icon = document.createElement("link");
+      icon.rel = "apple-touch-icon";
+      icon.href = `${prefix}assets/img/apple-touch-icon.png`;
+      document.head.appendChild(icon);
+    }
+    if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      });
+    }
+  } catch {
+    /* PWA extras must never break the safety button */
+  }
 })();
