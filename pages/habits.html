@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Tiny kind habits, tracked gently on Minco — streaks, not pressure." />
+  <title>Habits — Minco</title>
+  <link rel="icon" href="../assets/img/mincologo.png" type="image/png" />
+  <link rel="stylesheet" href="../assets/css/main.css" />
+  <link rel="stylesheet" href="../assets/css/habits.css" />
+  <script src="../assets/js/main.js" defer></script>
+  <script src="../assets/js/api.js" defer></script>
+  <script src="../assets/js/habits.js" defer></script>
+  <script src="../assets/js/sos.js" defer></script>
+</head>
+<body>
+
+  <header class="navbar" id="navbar">
+    <div class="container nav-inner">
+      <a href="home.html" class="logo">
+        <img src="../assets/img/mincologo.png" alt="Minco logo" class="logo-img" />
+        <span class="logo-text">Minco</span>
+      </a>
+      <nav class="nav-links" id="navLinks">
+        <a href="home.html">User page</a>
+        <a href="guidelines.html">Safe space</a>
+        <a href="profile.html">Profile</a>
+        <a href="resources.html">Resources</a>
+        <a href="meetings.html">Meetings</a>
+        <a href="journal.html">Journal</a>
+        <a href="habits.html" class="btn btn-small btn-primary">Habits</a>
+      </nav>
+      <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="back-bar"><a href="home.html">← Back to feed</a></div>
+
+  <main class="habits-wrap">
+    <div class="habits-hero">
+      <p class="badge">Gentle habits 🌱</p>
+      <h1>Small steps, <span class="gradient-text">kept kindly</span></h1>
+      <p>Pick a few tiny habits. Tick them when you can — streaks celebrate,
+        never punish. Missing a day just starts a new chain.</p>
+    </div>
+
+    <section class="habit-form-card">
+      <h2>Start a habit</h2>
+      <div class="form-error" id="formError" role="alert"></div>
+      <form id="habitForm" novalidate>
+        <div class="habit-form-row">
+          <div class="field grow">
+            <label for="habitTitle">Habit</label>
+            <input id="habitTitle" type="text" maxlength="40" placeholder="e.g. 10-minute walk" required />
+          </div>
+          <div class="field">
+            <label for="habitIcon">Icon</label>
+            <select id="habitIcon">
+              <option value="">✨</option>
+              <option value="🌱">🌱</option>
+              <option value="🚶">🚶</option>
+              <option value="😴">😴</option>
+              <option value="📖">📖</option>
+              <option value="💧">💧</option>
+              <option value="🧘">🧘</option>
+              <option value="🎨">🎨</option>
+              <option value="🤝">🤝</option>
+              <option value="🍎">🍎</option>
+              <option value="☀️">☀️</option>
+              <option value="🎵">🎵</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-small habit-add" type="submit" id="addBtn">Add</button>
+        </div>
+      </form>
+      <p class="habit-hint" id="backendHint"></p>
+    </section>
+
+    <section class="habit-list-card">
+      <div class="habit-list-head">
+        <h2>My habits</h2>
+        <span class="habit-count" id="habitCount"></span>
+      </div>
+      <div id="habitList"></div>
+    </section>
+
+    <p class="habits-note">Habits stay private to your account. A broken streak isn't failure —
+      it's information. Be as kind to yourself as you are to others here. 💜</p>
+  </main>
+
+</body>
+</html>

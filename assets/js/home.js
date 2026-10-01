@@ -112,6 +112,7 @@ const score = (p) => p.ups - p.downs + p.loves * 0.5;
 function matchesSearch(p, q) {
   if (!q) return true;
   const hay = [p.text, p.name, p.community, `c/${p.community}`, p.tag,
+    ...((p.poll && p.poll.options) || []),
     ...p.replies.flatMap((r) => [r.text, r.name])].join(" ").toLowerCase();
   return q.split(/\s+/).filter(Boolean).every((word) => hay.includes(word));
 }
@@ -212,6 +213,26 @@ function replyHTML(r) {
   </div>`;
 }
 
+function pollHTML(p) {
+  const poll = p.poll;
+  if (!poll || !poll.options || !poll.options.length) return "";
+  const total = poll.total || 0;
+  const rows = poll.options.map((opt, idx) => {
+    const votes = (poll.votes && poll.votes[idx]) || 0;
+    const pct = total ? Math.round((votes / total) * 100) : 0;
+    const mine = poll.myVote === idx;
+    return `<button class="poll-opt-btn ${mine ? "mine" : ""}" data-act="poll-vote" data-id="${p.id}" data-opt="${idx}" title="${mine ? "Your vote — tap to change" : "Vote for this option"}">
+      <span class="poll-fill" style="width:${pct}%"></span>
+      <span class="poll-opt-label">${mine ? "✓ " : ""}${hi(opt)}</span>
+      <span class="poll-pct">${total ? `${pct}%` : ""}</span>
+    </button>`;
+  }).join("");
+  const caption = total
+    ? `${total} vote${total === 1 ? "" : "s"}${poll.myVote >= 0 ? " · you voted" : ""} — tap to ${poll.myVote >= 0 ? "change" : "vote"}`
+    : "Be the first to vote — tap an option";
+  return `<div class="poll" id="poll-${p.id}"><p class="poll-title">📊 Poll</p>${rows}<p class="poll-meta">${caption}</p></div>`;
+}
+
 function postHTML(p, i) {
   const isMine = Boolean(p.mine) || p.name === session.name;
   return `
@@ -229,6 +250,7 @@ function postHTML(p, i) {
       </div>
       <p class="post-text">${hi(p.text)}</p>
       ${p.image ? `<img class="post-img" src="${p.image}" alt="Post image" loading="lazy" data-full="${p.image}" />` : ""}
+      ${pollHTML(p)}
       <div class="post-actions">
         <button class="action-btn" data-act="toggle-replies" data-id="${p.id}">${ICON.comment} ${p.replies.length} ${p.replies.length === 1 ? "reply" : "replies"}</button>
         <button class="action-btn ${p.loved ? "loved" : ""}" data-act="love" data-id="${p.id}">${ICON.heart} ${p.loves}</button>
@@ -344,6 +366,9 @@ document.getElementById("feed").addEventListener("click", (e) => {
     navigator.clipboard?.writeText(`${location.href.split("?")[0]}#post-${id}`).catch(() => {});
     toast("Link copied — invite someone who needs this.");
   }
+  if (act === "poll-vote") {
+    votePoll(id, Number(btn.dataset.opt), btn);
+  }
   if (act === "edit") {
     enterEditMode(id);
   }
@@ -450,6 +475,48 @@ async function deletePostFlow(id, btn) {
   toast("Post deleted.");
 }
 
+// ---------- poll voting (one vote each, tap again to switch) ----------
+async function votePoll(id, opt, btn) {
+  const posts = getPosts();
+  const post = posts.find((p) => p.id === id);
+  if (!post || !post.poll) return;
+  if (!(opt >= 0 && opt < post.poll.options.length)) return;
+  if (btn) btn.disabled = true;
+  if (useBackend && typeof id === "number" && id < 1e12) {
+    try {
+      const { poll } = await API().req(`/api/posts/${id}/poll/vote`, {
+        method: "POST", auth: true, body: { option: opt },
+      });
+      savePosts(posts.map((p) => (p.id === id ? { ...p, poll } : p)));
+      renderFeed();
+      toast("Vote counted — thanks for weighing in.");
+      return;
+    } catch (err) {
+      toast(err.message || "Couldn't vote — try again.");
+      if (btn) btn.disabled = false;
+      return;
+    }
+  }
+  // Offline: keep one local vote, allow switching
+  const poll = {
+    options: [...post.poll.options],
+    votes: [...(post.poll.votes || post.poll.options.map(() => 0))],
+    total: post.poll.total || 0,
+    myVote: post.poll.myVote ?? -1,
+  };
+  while (poll.votes.length < poll.options.length) poll.votes.push(0);
+  if (poll.myVote >= 0 && poll.myVote < poll.votes.length) {
+    poll.votes[poll.myVote] = Math.max(0, poll.votes[poll.myVote] - 1);
+  }
+  poll.votes[opt] += 1;
+  poll.myVote = opt;
+  poll.total = poll.votes.reduce((n, v) => n + v, 0);
+  post.poll = poll;
+  savePosts(posts);
+  renderFeed();
+  toast("Vote counted — thanks for weighing in.");
+}
+
 // Replies (submit delegates too)
 document.getElementById("feed").addEventListener("submit", (e) => {
   const form = e.target.closest(".reply-form");
@@ -473,16 +540,20 @@ document.getElementById("feed").addEventListener("submit", (e) => {
 });
 
 // ---------- composer (shared by bottom box + quick-post popup) ----------
-async function publishPost({ text, community, image, clear }) {
+async function publishPost({ text, community, image, poll, clear }) {
   if (!text && !image) {
     toast("Write something kind or add an image first.");
+    return false;
+  }
+  if (poll && !(poll.length >= 2 && poll.length <= 4)) {
+    toast("Poll needs 2–4 options.");
     return false;
   }
   // Backend first (real shared post), local fallback otherwise
   if (useBackend) {
     try {
       const { post } = await API().req("/api/posts", {
-        method: "POST", auth: true, body: { text, community, image },
+        method: "POST", auth: true, body: { text, community, image, poll },
       });
       const posts = getPosts();
       posts.unshift(post);
@@ -494,8 +565,12 @@ async function publishPost({ text, community, image, clear }) {
       return true;
     } catch (err) {
       toast(err.message || "Backend unreachable — saved on this device only.");
+      if (/poll/i.test(err.message || "")) return false;
     }
   }
+  const pollObj = poll && poll.length >= 2
+    ? { options: poll, votes: poll.map(() => 0), total: 0, myVote: -1 }
+    : null;
   const posts = getPosts();
   posts.unshift({
     id: Date.now(),
@@ -508,6 +583,7 @@ async function publishPost({ text, community, image, clear }) {
     image,
     ups: 1, downs: 0, userVote: 1, loves: 0, loved: false,
     replies: [],
+    poll: pollObj,
   });
   savePosts(posts);
   clear();
@@ -537,7 +613,56 @@ function clearQuickComposer() {
   document.getElementById("quickImgPreviewWrap")?.classList.add("hidden");
   const fileInput = document.getElementById("quickImage");
   if (fileInput) fileInput.value = "";
+  resetPollComposer();
 }
+
+// ---------- poll composer (optional attachment on quick posts) ----------
+function pollInputs() {
+  return [...document.querySelectorAll("#quickPollWrap .poll-opt")];
+}
+function resetPollComposer() {
+  document.getElementById("quickPollWrap")?.classList.add("hidden");
+  pollInputs().forEach((input, i) => {
+    input.value = "";
+    input.classList.toggle("hidden", i >= 2);
+  });
+}
+function collectPoll() {
+  const wrap = document.getElementById("quickPollWrap");
+  if (!wrap || wrap.classList.contains("hidden")) return null;
+  const opts = pollInputs()
+    .filter((el) => !el.classList.contains("hidden"))
+    .map((el) => el.value.trim().slice(0, 60))
+    .filter(Boolean);
+  if (!opts.length) return null; // poll box opened but left empty → plain post
+  const seen = new Set(opts.map((o) => o.toLowerCase()));
+  if (opts.length < 2) {
+    toast("Add at least 2 poll options — or remove the poll.");
+    return false;
+  }
+  if (seen.size !== opts.length) {
+    toast("Poll options must be different from each other.");
+    return false;
+  }
+  return opts.slice(0, 4);
+}
+
+document.getElementById("quickPollBtn")?.addEventListener("click", () => {
+  const wrap = document.getElementById("quickPollWrap");
+  if (!wrap) return;
+  wrap.classList.toggle("hidden");
+  if (!wrap.classList.contains("hidden")) wrap.querySelector(".poll-opt")?.focus();
+});
+document.getElementById("quickPollMore")?.addEventListener("click", () => {
+  const next = pollInputs().find((el) => el.classList.contains("hidden"));
+  if (next) {
+    next.classList.remove("hidden");
+    next.focus();
+  } else {
+    toast("4 options max — keep it simple.");
+  }
+});
+document.getElementById("quickPollRemove")?.addEventListener("click", resetPollComposer);
 
 quickText?.addEventListener("input", () => (quickCount.textContent = `${quickText.value.length}/280`));
 document.getElementById("composeFab")?.addEventListener("click", openCompose);
@@ -562,10 +687,13 @@ document.getElementById("quickRemoveImg")?.addEventListener("click", () => {
   document.getElementById("quickImgPreviewWrap").classList.add("hidden");
 });
 document.getElementById("quickPostBtn")?.addEventListener("click", async () => {
+  const poll = collectPoll();
+  if (poll === false) return; // validation message already shown
   const ok = await publishPost({
     text: quickText.value.trim(),
     community: document.getElementById("quickCommunity").value,
     image: quickPendingImage,
+    poll,
     clear: clearQuickComposer,
   });
   if (ok) closeCompose();
@@ -778,6 +906,42 @@ document.addEventListener("click", (e) => {
   if (notifOpen && !e.target.closest(".notif-wrap")) setNotifOpen(false);
 });
 
+// ---------- daily gratitude prompt (shareable to c/wins) ----------
+const GRATITUDE_FALLBACK = [
+  "What is one small thing that went okay today?",
+  "Who is someone you're glad showed up lately — and why?",
+  "What is a comfort (tea, song, blanket, walk) you can thank today?",
+  "What is something your body let you do today?",
+  "What is a tiny win from this week worth a second look?",
+  "What made you smile, even briefly, in the last few days?",
+  "What is something ordinary you get to enjoy today?",
+];
+let gratitudePrompt = "";
+
+async function loadGratitude() {
+  const el = document.getElementById("gratitudeText");
+  try {
+    const data = await API().dailyWellness();
+    gratitudePrompt = data.gratitude || "";
+  } catch {
+    const day = Math.floor(Date.now() / 864e5);
+    gratitudePrompt = GRATITUDE_FALLBACK[day % GRATITUDE_FALLBACK.length];
+  }
+  if (el && gratitudePrompt) el.textContent = `“${gratitudePrompt}”`;
+}
+
+document.getElementById("gratitudeShareBtn")?.addEventListener("click", () => {
+  const community = document.getElementById("quickCommunity");
+  if (community) community.value = "wins";
+  if (quickText && !quickText.value.trim()) {
+    quickText.value = gratitudePrompt
+      ? `Today I'm grateful for… (${gratitudePrompt}) `
+      : "Today I'm grateful for… ";
+    quickCount.textContent = `${quickText.value.length}/280`;
+  }
+  openCompose();
+});
+
 // ---------- welcome banner, lightbox, logout ----------
 document.getElementById("welcomePostBtn")?.addEventListener("click", openCompose);
 document.getElementById("lightboxClose").addEventListener("click", () =>
@@ -798,6 +962,7 @@ document.getElementById("logoutBtn").addEventListener("click", async () => {
 // init
 renderUser();
 renderFeed();
+loadGratitude().catch(() => {});
 refreshNotifications().catch(() => {});
 initBackend().catch(() => {});
 // Poll for new replies/loves while the page is open

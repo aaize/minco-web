@@ -11,7 +11,10 @@
 ## Features
 
 - **Community feed** — topic spaces (calm, sleep, stress, wins), up/down votes, loves,
-  replies, saves, reports, search, sort (hot/new/top), image posts, edit + delete your own posts
+  replies, saves, reports, polls with one-tap voting, search, sort (hot/new/top),
+  image posts, edit + delete your own posts
+- **Daily gratitude** — rotating gratitude prompt in the feed aside, shareable to c/wins
+- **Gentle habits** — tiny private habits with today ticks, streaks, 7-day dots and totals
 - **Mood calendar** — one-tap daily check-in, weekly average, streaks, gentle care nudges
 - **Wellbeing check-in** — private low-mood / worry questionnaires with bands, trends,
   per-question breakdown and auto-written insights (100% on-device, never sent anywhere)
@@ -69,8 +72,9 @@ as an alternative host.
 | Area | Endpoints |
 |---|---|
 | Auth | `POST /api/register`, `POST /api/login`, `GET/PUT /api/me`, `POST /api/logout` |
-| Posts | `GET/POST /api/posts`, `PUT/DELETE /api/posts/<id>`, `…/vote`, `…/love`, `…/replies`, `…/save`, `…/report` |
+| Posts | `GET/POST /api/posts`, `PUT/DELETE /api/posts/<id>`, `…/vote`, `…/love`, `…/replies`, `…/save`, `…/report`, `…/poll/vote` |
 | Moods | `GET/POST /api/moods` |
+| Habits | `GET/POST /api/habits`, `…/<id>/check`, `DELETE …` |
 | Journal | `GET/POST /api/journal`, `GET/PUT/DELETE /api/journal/<id>` |
 | Meetings | `GET/POST /api/meetings`, `…/rsvp`, `DELETE …` |
 | Resources | `GET/POST /api/resources`, `…/save`, `…/rate`, `DELETE …` |
@@ -82,7 +86,7 @@ See `WORKFLOW.txt` for the full per-page data-flow reference.
 
 ```
 index.html                  landing (hero, features, steps, CTA)
-pages/                      login, register, home (feed), checkin, journal,
+pages/                      login, register, home (feed), checkin, journal, habits,
                             meetings, resources, games (break), profile, guidelines
 assets/js|css|img/          vanilla JS + CSS per page, shared api.js/sos.js/mood.js
 sw.js + manifest.webmanifest PWA shell

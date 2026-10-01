@@ -88,5 +88,11 @@
     toggleResourceSave: (id) => req(`/api/resources/${id}/save`, { method: "POST", auth: true }),
     rateResource: (id, stars) =>
       req(`/api/resources/${id}/rate`, { method: "POST", auth: true, body: { stars } }),
+    listHabits: () => req("/api/habits", { auth: true }),
+    createHabit: (habit) => req("/api/habits", { method: "POST", auth: true, body: habit }),
+    toggleHabit: (id) => req(`/api/habits/${id}/check`, { method: "POST", auth: true }),
+    deleteHabit: (id) => req(`/api/habits/${id}`, { method: "DELETE", auth: true }),
+    votePoll: (id, option) =>
+      req(`/api/posts/${id}/poll/vote`, { method: "POST", auth: true, body: { option } }),
   };
 })();

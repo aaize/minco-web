@@ -104,6 +104,32 @@ def init_db():
           created_at INTEGER NOT NULL,
           UNIQUE (post_id, user_id)
         );
+        CREATE TABLE IF NOT EXISTS polls (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          post_id INTEGER NOT NULL UNIQUE REFERENCES posts(id) ON DELETE CASCADE,
+          options TEXT NOT NULL DEFAULT '[]',
+          created_at INTEGER NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS poll_votes (
+          poll_id INTEGER NOT NULL REFERENCES polls(id) ON DELETE CASCADE,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          option_idx INTEGER NOT NULL,
+          PRIMARY KEY (poll_id, user_id)
+        );
+        CREATE TABLE IF NOT EXISTS habits (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          title TEXT NOT NULL,
+          icon TEXT NOT NULL DEFAULT '',
+          created_at INTEGER NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS habit_logs (
+          habit_id INTEGER NOT NULL REFERENCES habits(id) ON DELETE CASCADE,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          date TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          PRIMARY KEY (habit_id, user_id, date)
+        );
         CREATE TABLE IF NOT EXISTS journal_entries (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -340,6 +366,57 @@ def require_auth(fn):
     return wrapper
 
 
+def poll_to_dict(poll_row, viewer_id=None):
+    """Serialize a polls row + vote counts. Returns None when no poll."""
+    import json as _json
+    if not poll_row:
+        return None
+    try:
+        options = _json.loads(poll_row["options"])
+    except (TypeError, ValueError):
+        options = []
+    if not isinstance(options, list):
+        options = []
+    db = get_db()
+    counts = [0] * len(options)
+    for row in db.execute(
+        "SELECT option_idx, COUNT(*) c FROM poll_votes WHERE poll_id = ? GROUP BY option_idx",
+        (poll_row["id"],),
+    ).fetchall():
+        if 0 <= row["option_idx"] < len(options):
+            counts[row["option_idx"]] = row["c"]
+    my_vote = -1
+    if viewer_id:
+        mine = db.execute(
+            "SELECT option_idx FROM poll_votes WHERE poll_id = ? AND user_id = ?",
+            (poll_row["id"], viewer_id),
+        ).fetchone()
+        my_vote = mine["option_idx"] if mine else -1
+    return {
+        "options": options, "votes": counts,
+        "total": sum(counts), "myVote": my_vote,
+    }
+
+
+def get_poll_for_post(post_id, viewer_id=None):
+    poll = get_db().execute(
+        "SELECT * FROM polls WHERE post_id = ?", (post_id,)).fetchone()
+    return poll_to_dict(poll, viewer_id)
+
+
+def validate_poll_options(raw):
+    """Clean a raw options list. Returns (options, error)."""
+    if not isinstance(raw, list):
+        return None, "Poll needs 2–4 options."
+    options = [(o or "").strip()[:60] for o in raw if isinstance(o, str)]
+    options = [o for o in options if o]
+    if not (2 <= len(options) <= 4):
+        return None, "Poll needs 2–4 non-empty options (max 60 chars each)."
+    if len(set(o.lower() for o in options)) != len(options):
+        return None, "Poll options must be different from each other."
+    return options, None
+
+
 def post_to_dict(p, viewer_id=None):
     db = get_db()
     replies = [
@@ -374,6 +451,7 @@ def post_to_dict(p, viewer_id=None):
         "text": p["text"], "image": p["image"], "ups": p["ups"], "downs": p["downs"],
         "loves": p["loves"], "userVote": user_vote, "loved": loved,
         "saves": saves, "saved": saved,
+        "poll": get_poll_for_post(p["id"], viewer_id),
         "mine": bool(viewer_id) and p["user_id"] == viewer_id,
         "time": time_ago(p["created_at"]), "ts": p["created_at"], "replies": replies,
     }
@@ -616,6 +694,7 @@ def list_posts():
 @app.post("/api/posts")
 @require_auth
 def create_post():
+    import json as _json
     data = request.get_json(force=True, silent=True) or {}
     text = (data.get("text") or "").strip()[:280]
     community = (data.get("community") or "calm").lower()
@@ -626,6 +705,11 @@ def create_post():
         return jsonify({"error": "Write something kind or add an image first."}), 400
     if image and len(image) > 1_500_000:
         return jsonify({"error": "Image too large — pick a smaller one."}), 400
+    poll_options = None
+    if data.get("poll") is not None:
+        poll_options, err = validate_poll_options(data.get("poll"))
+        if err:
+            return jsonify({"error": err}), 400
     db = get_db()
     cur = db.execute(
         "INSERT INTO posts (user_id, name, community, tag, text, image, ups, downs, loves, created_at)"
@@ -634,9 +718,45 @@ def create_post():
          image, int(time.time() * 1000)),
     )
     db.execute("INSERT INTO votes (post_id, user_id, value) VALUES (?,?,1)", (cur.lastrowid, g.user["id"]))
+    if poll_options is not None:
+        db.execute(
+            "INSERT INTO polls (post_id, options, created_at) VALUES (?,?,?)",
+            (cur.lastrowid, _json.dumps(poll_options), int(time.time() * 1000)),
+        )
     db.commit()
     p = db.execute("SELECT * FROM posts WHERE id = ?", (cur.lastrowid,)).fetchone()
     return jsonify({"post": post_to_dict(p, g.user["id"])}), 201
+
+
+@app.post("/api/posts/<int:pid>/poll/vote")
+@require_auth
+def vote_poll(pid):
+    data = request.get_json(force=True, silent=True) or {}
+    try:
+        option = int(data.get("option", -1))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Pick an option to vote."}), 400
+    db = get_db()
+    if not db.execute("SELECT 1 FROM posts WHERE id = ?", (pid,)).fetchone():
+        return jsonify({"error": "Post not found."}), 404
+    poll = db.execute("SELECT * FROM polls WHERE post_id = ?", (pid,)).fetchone()
+    if not poll:
+        return jsonify({"error": "This post has no poll."}), 404
+    import json as _json
+    try:
+        options = _json.loads(poll["options"])
+    except (TypeError, ValueError):
+        options = []
+    if not (0 <= option < len(options)):
+        return jsonify({"error": "Pick a valid poll option."}), 400
+    db.execute(
+        "INSERT INTO poll_votes (poll_id, user_id, option_idx) VALUES (?,?,?)"
+        " ON CONFLICT(poll_id, user_id) DO UPDATE SET option_idx=excluded.option_idx",
+        (poll["id"], g.user["id"], option),
+    )
+    db.commit()
+    poll = db.execute("SELECT * FROM polls WHERE post_id = ?", (pid,)).fetchone()
+    return jsonify({"poll": poll_to_dict(poll, g.user["id"])})
 
 
 @app.post("/api/posts/<int:pid>/vote")
@@ -767,6 +887,8 @@ def delete_post(pid):
     db.execute("DELETE FROM replies WHERE post_id = ?", (pid,))
     db.execute("DELETE FROM saves WHERE post_id = ?", (pid,))
     db.execute("DELETE FROM reports WHERE post_id = ?", (pid,))
+    db.execute("DELETE FROM poll_votes WHERE poll_id IN (SELECT id FROM polls WHERE post_id = ?)", (pid,))
+    db.execute("DELETE FROM polls WHERE post_id = ?", (pid,))
     db.execute("DELETE FROM notifications WHERE post_id = ?", (pid,))
     db.execute("DELETE FROM posts WHERE id = ?", (pid,))
     db.commit()
@@ -1356,6 +1478,124 @@ def save_mood():
                     "weekly": weekly_summary({r["date"]: r for r in rows})}), 201
 
 
+HABIT_ICONS = {"🌱", "🚶", "😴", "📖", "💧", "🧘", "🎨", "🤝", "🍎", "☀️", "🎵", "💜"}
+
+
+def habit_to_dict(h, user_id=None):
+    import datetime
+    db = get_db()
+    uid = user_id or h["user_id"]
+    dates = [r["date"] for r in db.execute(
+        "SELECT date FROM habit_logs WHERE habit_id = ? AND user_id = ? ORDER BY date DESC LIMIT 90",
+        (h["id"], uid),
+    ).fetchall()]
+    date_set = set(dates)
+    total = db.execute(
+        "SELECT COUNT(*) c FROM habit_logs WHERE habit_id = ? AND user_id = ?",
+        (h["id"], uid),
+    ).fetchone()["c"]
+    # Current streak: consecutive days ending today (or yesterday if today missing)
+    streak = 0
+    day = datetime.date.today()
+    if day.isoformat() not in date_set:
+        day -= datetime.timedelta(days=1)
+    while day.isoformat() in date_set:
+        streak += 1
+        day -= datetime.timedelta(days=1)
+    week = []
+    for i in range(6, -1, -1):
+        d = (datetime.date.today() - datetime.timedelta(days=i)).isoformat()
+        week.append({"date": d, "done": d in date_set})
+    today = datetime.date.today().isoformat()
+    return {
+        "id": h["id"], "title": h["title"], "icon": h["icon"],
+        "ts": h["created_at"], "mine": True,
+        "streak": streak, "total": total,
+        "doneToday": today in date_set, "week": week, "logs": dates,
+    }
+
+
+@app.get("/api/habits")
+@require_auth
+def list_habits():
+    db = get_db()
+    rows = db.execute(
+        "SELECT * FROM habits WHERE user_id = ? ORDER BY created_at ASC LIMIT 50",
+        (g.user["id"],),
+    ).fetchall()
+    return jsonify({"habits": [habit_to_dict(h, g.user["id"]) for h in rows]})
+
+
+@app.post("/api/habits")
+@require_auth
+def create_habit():
+    data = request.get_json(force=True, silent=True) or {}
+    title = (data.get("title") or "").strip()[:40]
+    icon = (data.get("icon") or "").strip()
+    if not (2 <= len(title) <= 40):
+        return jsonify({"error": "Name your habit (2–40 characters)."}), 400
+    if icon and icon not in HABIT_ICONS:
+        return jsonify({"error": "Pick an icon from the list (or none)."}), 400
+    db = get_db()
+    count = db.execute(
+        "SELECT COUNT(*) c FROM habits WHERE user_id = ?", (g.user["id"],)
+    ).fetchone()["c"]
+    if count >= 12:
+        return jsonify({"error": "12 habits max — remove one before adding another."}), 400
+    cur = db.execute(
+        "INSERT INTO habits (user_id, title, icon, created_at) VALUES (?,?,?,?)",
+        (g.user["id"], title, icon, int(time.time() * 1000)),
+    )
+    db.commit()
+    h = db.execute("SELECT * FROM habits WHERE id = ?", (cur.lastrowid,)).fetchone()
+    return jsonify({"habit": habit_to_dict(h, g.user["id"])}), 201
+
+
+@app.post("/api/habits/<int:hid>/check")
+@require_auth
+def toggle_habit(hid):
+    import datetime
+    db = get_db()
+    h = db.execute("SELECT * FROM habits WHERE id = ?", (hid,)).fetchone()
+    if not h or h["user_id"] != g.user["id"]:
+        return jsonify({"error": "Habit not found."}), 404
+    today = datetime.date.today().isoformat()
+    exists = db.execute(
+        "SELECT 1 FROM habit_logs WHERE habit_id = ? AND user_id = ? AND date = ?",
+        (hid, g.user["id"], today),
+    ).fetchone()
+    if exists:
+        db.execute(
+            "DELETE FROM habit_logs WHERE habit_id = ? AND user_id = ? AND date = ?",
+            (hid, g.user["id"], today),
+        )
+        done = False
+    else:
+        db.execute(
+            "INSERT INTO habit_logs (habit_id, user_id, date, created_at) VALUES (?,?,?,?)",
+            (hid, g.user["id"], today, int(time.time() * 1000)),
+        )
+        done = True
+    db.commit()
+    h = db.execute("SELECT * FROM habits WHERE id = ?", (hid,)).fetchone()
+    out = habit_to_dict(h, g.user["id"])
+    return jsonify({"done": done, "habit": out})
+
+
+@app.delete("/api/habits/<int:hid>")
+@require_auth
+def delete_habit(hid):
+    db = get_db()
+    h = db.execute("SELECT * FROM habits WHERE id = ?", (hid,)).fetchone()
+    if not h or h["user_id"] != g.user["id"]:
+        return jsonify({"error": "Habit not found."}), 404
+    # Manual cascade (SQLite FKs off by default)
+    db.execute("DELETE FROM habit_logs WHERE habit_id = ?", (hid,))
+    db.execute("DELETE FROM habits WHERE id = ?", (hid,))
+    db.commit()
+    return jsonify({"ok": True})
+
+
 @app.post("/api/chat")
 def chat():
     data = request.get_json(force=True, silent=True) or {}
@@ -1401,6 +1641,16 @@ TIPS = [
     "Take a 10-minute walk, no podcast — just notice.",
 ]
 
+GRATITUDE = [
+    "What is one small thing that went okay today?",
+    "Who is someone you're glad showed up lately — and why?",
+    "What is a comfort (tea, song, blanket, walk) you can thank today?",
+    "What is something your body let you do today?",
+    "What is a tiny win from this week worth a second look?",
+    "What made you smile, even briefly, in the last few days?",
+    "What is something ordinary you get to enjoy today?",
+]
+
 
 @app.get("/api/wellness/daily")
 def wellness_daily():
@@ -1413,6 +1663,7 @@ def wellness_daily():
         "affirmation": AFFIRMATIONS[ordinal % len(AFFIRMATIONS)],
         "breathing": BREATHING[ordinal % len(BREATHING)],
         "tip": TIPS[ordinal % len(TIPS)],
+        "gratitude": GRATITUDE[ordinal % len(GRATITUDE)],
     })
 
 

@@ -344,5 +344,33 @@ Env: HOST, PORT, DATABASE, FLASK_DEBUG / RENDER, AI_PROVIDER (future).
   Profile             profile.html          profile.js            profile.css
   Guidelines          guidelines.html       (static)              guidelines.css
   Quick-post popup    (on home.html)         (in home.js)            (in home.css)
+  Habits              habits.html           habits.js             habits.css
+  Polls               (on home.html)         (in home.js)            (in home.css)
   Shared              index.html            main.js/landing.js    main.css/landing.css
   Backend             backend/app.py        (Flask routes)        backend/minco.db
+
+ 17. POLLS / GRATITUDE / HABITS WORKFLOW
+ --------------------------------------
+ POLLS (feed attachment, one vote each, change allowed):
+   Composer: quick-post popup "Poll" toggle -> 2 required option inputs,
+   "+ option" reveals 3rd/4th (60 chars each, must differ). Empty poll box
+   = plain post. publishPost() sends {text, community, image, poll}.
+   Backend: POST /api/posts accepts optional poll[2-4]; stored in polls
+   (post_id UNIQUE, options JSON). POST /api/posts/<id>/poll/vote
+   {option} upserts into poll_votes. post_to_dict embeds
+   poll{options, votes[], total, myVote}. Deleted with its post.
+   Feed: percentage bars, my vote marked, tap to vote/change; search
+   covers option text. Offline: local poll object, one local vote.
+   Tables: polls(post_id UNIQUE, options) + poll_votes(poll_id, user_id).
+ GRATITUDE (daily prompt -> c/wins):
+   GET /api/wellness/daily gains deterministic "gratitude" string.
+   home.html aside card shows it; "Share in c/wins" opens the composer
+   with community=wins + prefilled "Today I'm grateful for… (prompt)".
+   Offline: same 7 prompts hardcoded in home.js, picked by day number.
+ HABITS (private, streaks celebrate never punish):
+   Fields: title (2-40), icon (optional, from fixed emoji set, max 12/user).
+   Flow: GET /api/habits -> cards with today tick, streak pill (2+ days),
+   7-day dots, totals -> POST /api/habits/<id>/check toggles today ->
+   DELETE removes habit + logs. Offline: minco_habits_v1 [{id,title,icon,
+   logs[dates]}] with mirrored streak math. Page: pages/habits.html,
+   linked from home side-nav. Tables: habits + habit_logs(habit,user,date).
