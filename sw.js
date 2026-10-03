@@ -6,7 +6,7 @@
 // Bump VERSION to invalidate old caches on deploy.
 // ==========================================================
 
-const VERSION = "minco-v2";
+const VERSION = "minco-v3";
 const CORE = [
   "/",
   "/index.html",
@@ -16,6 +16,7 @@ const CORE = [
   "/assets/js/main.js",
   "/assets/js/landing.js",
   "/assets/js/sos.js",
+  "/assets/js/helper.js",
   "/assets/img/mincologo.png",
   "/assets/img/icon-192.png",
   "/assets/img/icon-512.png",

@@ -346,6 +346,8 @@ Env: HOST, PORT, DATABASE, FLASK_DEBUG / RENDER, AI_PROVIDER (future).
   Quick-post popup    (on home.html)         (in home.js)            (in home.css)
   Habits              habits.html           habits.js             habits.css
   Polls               (on home.html)         (in home.js)            (in home.css)
+  Helper chat         (global widget)        helper.js             (in main.css)
+  SOS button          (global widget)        sos.js                (in main.css)
   Shared              index.html            main.js/landing.js    main.css/landing.css
   Backend             backend/app.py        (Flask routes)        backend/minco.db
 

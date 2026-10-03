@@ -28,6 +28,9 @@
 - **Notifications** — replies + loves on your posts, unread badge, 30s polling
 - **SOS safety net** — one-tap floating button on every page with crisis helplines,
   breathing resets and calm next steps
+- **Minco Helper chat** — floating companion on every page backed by `POST /api/chat`
+  (crisis-first rules, peer-support only), quick-reply chips, offline answers,
+  per-account history, crisis replies escalate to the SOS panel
 - **PWA** — installable, offline-first static shell via service worker
 
 ## Architecture
@@ -79,6 +82,7 @@ as an alternative host.
 | Meetings | `GET/POST /api/meetings`, `…/rsvp`, `DELETE …` |
 | Resources | `GET/POST /api/resources`, `…/save`, `…/rate`, `DELETE …` |
 | Meta | `GET /api/wellness/daily`, `/api/support`, `/api/stats/community`, `/api/stats/me`, `/api/notifications…` |
+| Helper | `POST /api/chat` (public, crisis-first offline rules; `AI_PROVIDER` hook reserved) |
 
 See `WORKFLOW.txt` for the full per-page data-flow reference.
 
@@ -88,7 +92,7 @@ See `WORKFLOW.txt` for the full per-page data-flow reference.
 index.html                  landing (hero, features, steps, CTA)
 pages/                      login, register, home (feed), checkin, journal, habits,
                             meetings, resources, games (break), profile, guidelines
-assets/js|css|img/          vanilla JS + CSS per page, shared api.js/sos.js/mood.js
+assets/js|css|img/          vanilla JS + CSS per page, shared api.js/sos.js/mood.js/helper.js
 sw.js + manifest.webmanifest PWA shell
 backend/app.py              Flask API + frontend serving + security headers
 backend/minco.db            local SQLite (git-ignored, auto-seeded)
