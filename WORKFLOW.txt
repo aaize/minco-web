@@ -316,13 +316,17 @@ post_id, preview<=80, created_at, read). Deleted with its post.
   - Reporting: one report per user/post, reasons spam|unkind|unsafe|
     medical|other; owner-only deletes; anonymous display names allowed.
 
-15. RUN / DEPLOY WORKFLOW
--------------------------
-Local dev:
-  cd backend && (.venv/bin/python app.py)  -> http://127.0.0.1:5000
-  (serves API + frontend; macOS AirPlay may occupy :5000 -> use :5100).
-  Frontend-only preview also works via file:// (offline demo mode).
-  Test: node --check assets/js/<file>.js; curl /api/health.
+ 15. RUN / DEPLOY WORKFLOW
+ -------------------------
+ Local dev:
+   cd backend && (.venv/bin/python app.py)  -> http://127.0.0.1:5000
+   (serves API + frontend; macOS AirPlay may occupy :5000 -> use :5100).
+   Frontend-only preview also works via file:// (offline demo mode).
+   Test: pytest backend/tests -q (needs backend/requirements-dev.txt);
+   node --check assets/js/<file>.js; curl /api/health.
+   Theme: toggle 🌙/☀️ in any header (persisted as minco_theme, OS default,
+   pre-paint snippet in <head> avoids a flash); styles in main.css
+   [data-theme="dark"] block. CI: .github/workflows/ci.yml (pytest + node check).
 Production (PythonAnywhere, no card, Python 3.10):
   git push (Mac) -> ssh PA: cd ~/minco-web && git pull -> press Reload.
   venv /home/aaize09/.virtualenvs/minco, WSGI file points at
@@ -348,6 +352,7 @@ Env: HOST, PORT, DATABASE, FLASK_DEBUG / RENDER, AI_PROVIDER (future).
   Polls               (on home.html)         (in home.js)            (in home.css)
   Helper chat         (global widget)        helper.js             (in main.css)
   SOS button          (global widget)        sos.js                (in main.css)
+  Dark mode           (global toggle)        theme.js              (in main.css)
   Shared              index.html            main.js/landing.js    main.css/landing.css
   Backend             backend/app.py        (Flask routes)        backend/minco.db
 

@@ -31,7 +31,15 @@
 - **Minco Helper chat** — floating companion on every page backed by `POST /api/chat`
   (crisis-first rules, peer-support only), quick-reply chips, offline answers,
   per-account history, crisis replies escalate to the SOS panel
+- **Dark mode** — OS-aware toggle in every header, persisted, applied pre-paint (no flash)
 - **PWA** — installable, offline-first static shell via service worker
+
+## Quality
+
+- **31 pytest tests** (`backend/tests/`, run: `pip install -r backend/requirements-dev.txt
+  && python -m pytest backend/tests -q`) covering auth, posts, polls, habits,
+  resources, moods, journal, chat, headers and PWA routes — enforced by GitHub Actions CI
+  (plus `node --check` over all frontend JS).
 
 ## Architecture
 

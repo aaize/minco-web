@@ -246,6 +246,196 @@ a { text-decoration: none; color: inherit; }
 }
 .helper-form button:hover { opacity: 0.9; }
 
+/* ---------- Theme toggle button (injected by theme.js) ---------- */
+.theme-toggle {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+  display: inline-grid; place-items: center; cursor: pointer; font-size: 1.05rem;
+  border: 1px solid var(--card-border); background: rgba(255, 255, 255, 0.7);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.theme-toggle:hover { background: #f0efff; transform: translateY(-1px); }
+
+/* ==========================================================
+   Dark mode — variable flip + surface overrides.
+   Light pills with dark text are left alone (still readable);
+   ink-on-white breakages are re-pointed at primary purple.
+   ========================================================== */
+:root { color-scheme: light; }
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #14121f;
+  --ink: #edeafb;
+  --muted: #a8a6c4;
+  --primary-dark: #b7adff;
+  --card-border: rgba(255, 255, 255, 0.12);
+  --shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+[data-theme="dark"] body {
+  background:
+    radial-gradient(1000px 500px at 10% -5%, #2b2554 0%, transparent 60%),
+    radial-gradient(900px 500px at 95% 10%, #1c2c49 0%, transparent 60%),
+    var(--bg);
+}
+[data-theme="dark"] .theme-toggle { background: rgba(255, 255, 255, 0.08); }
+[data-theme="dark"] .theme-toggle:hover { background: rgba(255, 255, 255, 0.16); }
+
+/* Glass cards → dark glass */
+[data-theme="dark"] .navbar,
+[data-theme="dark"] .app-nav,
+[data-theme="dark"] .card,
+[data-theme="dark"] .side-nav,
+[data-theme="dark"] .post,
+[data-theme="dark"] .aside-card,
+[data-theme="dark"] .notif-panel,
+[data-theme="dark"] .compose-panel,
+[data-theme="dark"] .mood-panel,
+[data-theme="dark"] .sos-panel,
+[data-theme="dark"] .helper-panel,
+[data-theme="dark"] .auth-card,
+[data-theme="dark"] .share-card,
+[data-theme="dark"] .res-card,
+[data-theme="dark"] .journal-form-card,
+[data-theme="dark"] .journal-list-card,
+[data-theme="dark"] .profile-head,
+[data-theme="dark"] .edit-panel,
+[data-theme="dark"] .mini-post,
+[data-theme="dark"] .about-card,
+[data-theme="dark"] .habit-form-card,
+[data-theme="dark"] .habit-list-card,
+[data-theme="dark"] .post-card,
+[data-theme="dark"] .mini-card,
+[data-theme="dark"] .steps li,
+[data-theme="dark"] .quiz-card,
+[data-theme="dark"] .result-card,
+[data-theme="dark"] .history-card,
+[data-theme="dark"] .stats-card,
+[data-theme="dark"] .stats-panel,
+[data-theme="dark"] .meet-form-card,
+[data-theme="dark"] .meet-card,
+[data-theme="dark"] .badge,
+[data-theme="dark"] .empty-tab,
+[data-theme="dark"] .stats-empty {
+  background: rgba(30, 27, 55, 0.92);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Lavender surfaces → dark translucent */
+[data-theme="dark"] .search-wrap,
+[data-theme="dark"] .sort-tabs,
+[data-theme="dark"] .vote-rail,
+[data-theme="dark"] .action-btn,
+[data-theme="dark"] .reply,
+[data-theme="dark"] .icon-btn,
+[data-theme="dark"] .user-pill,
+[data-theme="dark"] .btn-logout,
+[data-theme="dark"] .btn-outline,
+[data-theme="dark"] .tool-btn,
+[data-theme="dark"] .notif-item:hover,
+[data-theme="dark"] .notif-emoji,
+[data-theme="dark"] .mood-btn,
+[data-theme="dark"] .mood-week,
+[data-theme="dark"] .mood-dot,
+[data-theme="dark"] .mood-day,
+[data-theme="dark"] .helper-msg.bot,
+[data-theme="dark"] .helper-chip,
+[data-theme="dark"] .sos-list a,
+[data-theme="dark"] .sos-list div.sos-row,
+[data-theme="dark"] .poll-composer,
+[data-theme="dark"] .poll-opt-btn,
+[data-theme="dark"] .stat-tile,
+[data-theme="dark"] .habit-dot,
+[data-theme="dark"] .seg,
+[data-theme="dark"] .options label,
+[data-theme="dark"] .save-btn,
+[data-theme="dark"] .rsvp-btn,
+[data-theme="dark"] .profile-tabs button:not(.active),
+[data-theme="dark"] .kind-tabs button:not(.active),
+[data-theme="dark"] .game-tabs button:not(.active) {
+  background: rgba(108, 92, 231, 0.16);
+  color: var(--ink);
+}
+[data-theme="dark"] .notif-item.unread,
+[data-theme="dark"] .mood-btn.selected,
+[data-theme="dark"] .options label.picked,
+[data-theme="dark"] .poll-opt-btn.mine {
+  background: rgba(108, 92, 231, 0.3);
+  color: var(--ink);
+}
+[data-theme="dark"] .action-btn:hover,
+[data-theme="dark"] .icon-btn:hover,
+[data-theme="dark"] .user-pill:hover,
+[data-theme="dark"] .btn-logout:hover,
+[data-theme="dark"] .tool-btn:hover,
+[data-theme="dark"] button.tool-btn:hover,
+[data-theme="dark"] .save-btn:hover,
+[data-theme="dark"] .rsvp-btn:hover,
+[data-theme="dark"] .kind-tabs button:hover:not(.active),
+[data-theme="dark"] .profile-tabs button:hover:not(.active),
+[data-theme="dark"] .mood-day:hover:not(:disabled),
+[data-theme="dark"] .mood-head button:hover,
+[data-theme="dark"] .mood-cal-top button:hover,
+[data-theme="dark"] .sos-head button:hover,
+[data-theme="dark"] .helper-head button:hover,
+[data-theme="dark"] .compose-panel-head button:hover {
+  background: rgba(108, 92, 231, 0.3);
+  color: var(--ink);
+}
+
+/* Ink-on-white breakages → primary purple (readable in both modes) */
+[data-theme="dark"] .app-tab.active,
+[data-theme="dark"] .kind-tabs button.active,
+[data-theme="dark"] .profile-tabs button.active,
+[data-theme="dark"] .seg button.active,
+[data-theme="dark"] .break-toggle button.active,
+[data-theme="dark"] .game-tabs button.active,
+[data-theme="dark"] .screener-tabs button.active,
+[data-theme="dark"] .community-pill,
+[data-theme="dark"] .count-pill,
+[data-theme="dark"] .reply-form button,
+[data-theme="dark"] .action-btn.save,
+[data-theme="dark"] .save-btn.saved,
+[data-theme="dark"] .mood-day.selected,
+[data-theme="dark"] .helper-msg.user {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  border-color: transparent;
+}
+
+/* Form fields */
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background: #232040;
+  color: var(--ink);
+  border-color: var(--card-border);
+}
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder { color: #8f8daa; }
+
+/* Specials */
+[data-theme="dark"] .toast { background: #f4f2ff; color: #1d1b2e; }
+[data-theme="dark"] .welcome { background: linear-gradient(135deg, #26214a, #1d2c4d); }
+[data-theme="dark"] .section-alt { background: linear-gradient(180deg, #1b1830, #221d3f); }
+[data-theme="dark"] #clearSearch { background: #f4f2ff; color: #14121f; }
+[data-theme="dark"] .when-pill.over { background: #2c2947; color: var(--muted); }
+[data-theme="dark"] .mood-fab .mood-fab-dot,
+[data-theme="dark"] .icon-btn .dot { border-color: #14121f; }
+[data-theme="dark"] .notif-count { border-color: #14121f; }
+[data-theme="dark"] .progress-track,
+[data-theme="dark"] .result-bar,
+[data-theme="dark"] .history-bar,
+[data-theme="dark"] .dist-track,
+[data-theme="dark"] .sym-track { background: #2e2a4d; }
+[data-theme="dark"] .do-col { background: linear-gradient(135deg, #17352a, #122a22); }
+[data-theme="dark"] .dont-col { background: linear-gradient(135deg, #3d1d22, #331920); }
+[data-theme="dark"] .prompt-bar { background: linear-gradient(135deg, #26214a, #1d2c4d); }
+[data-theme="dark"] .memory-card.open,
+[data-theme="dark"] .memory-card.done,
+[data-theme="dark"] .ttt-cell { background: #232040; color: var(--ink); }
+[data-theme="dark"] .demo-box code { background: #232040; }
+[data-theme="dark"] .nav-links.open { background: #1e1b37; }
+
 @media (max-width: 900px) {
   .menu-btn { display: flex; }
   .nav-links {
