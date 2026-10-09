@@ -1,6 +1,6 @@
 ---
 type: index
-updated: 2026-10-02
+updated: 2026-10-09
 ---
 
 # Minco-Web Wiki — Index
@@ -26,7 +26,7 @@ Master catalog for the Minco-Web codebase. Start here, then follow wikilinks. Op
 
 ## Features
 
-- [[community-feed]] — posts, votes, loves, replies, saves, reports, polls
+- [[community-feed]] — posts, votes, loves, replies, saves, reports, polls, mute
 - [[mood-calendar]] — daily one-tap mood, weekly avg, care nudges
 - [[wellbeing-checkin]] — on-device PHQ-9/GAD-7 style screeners + stats dashboard
 - [[private-journal]] — per-account journal CRUD
@@ -37,7 +37,7 @@ Master catalog for the Minco-Web codebase. Start here, then follow wikilinks. Op
 
 ## Cross-cutting
 
-- [[safety-privacy]] — guidelines gates, crisis triggers, no-diagnosis rule
+- [[safety-privacy]] — guidelines gates, crisis triggers, no-diagnosis rule, mute, report status, rate limits
 - [[log]] — ingest history for this wiki
 
 ## Source map (raw, immutable)

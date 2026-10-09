@@ -18,6 +18,8 @@ let useBackend = false;
 let me = { name: session.name, email: session.email, bio: "", avatar: "", joined: null };
 let allPosts = [];
 let myStats = null; // GET /api/stats/me when backend is on
+let mutedList = []; // GET /api/blocks when backend is on
+let myReportList = []; // GET /api/reports/mine when backend is on
 let activeTab = "posts";
 let pendingAvatar = null; // dataURL chosen in the edit form, not yet saved
 
@@ -51,6 +53,16 @@ async function initBackend() {
       myStats = await API().myStats();
     } catch {
       myStats = null;
+    }
+    try {
+      mutedList = (await API().listBlocks()).blocked || [];
+    } catch {
+      mutedList = [];
+    }
+    try {
+      myReportList = (await API().myReports()).reports || [];
+    } catch {
+      myReportList = [];
     }
   } catch {
     useBackend = false;
@@ -172,6 +184,8 @@ function renderTab() {
     box.innerHTML = loved.length
       ? loved.map(miniPostHTML).join("")
       : `<div class="empty-tab"><h3>Nothing supported yet</h3><p>Tap the ♥ on kind posts in the feed and they'll collect here.</p><a href="home.html" class="btn btn-small btn-primary">Find kind posts</a></div>`;
+  } else if (activeTab === "safety") {
+    renderSafety(box);
   } else {
     const communities = [...new Set(myPosts().map((p) => `c/${p.community}`))].join(" · ") || "—";
     const statsGrid = myStats ? `
@@ -195,6 +209,66 @@ function renderTab() {
 
 function renderAll() {
   renderHeader();
+  renderTab();
+}
+
+// ---------- safety tab (muted accounts + my reports) ----------
+function renderSafety(box) {
+  const muted = mutedList.map((m) => `
+    <div class="safety-row">
+      <span class="safety-ava">${esc((m.name || "M")[0].toUpperCase())}</span>
+      <div class="safety-body">
+        <strong>${esc(m.name)}</strong>
+        <span>muted ${esc(m.time || "")}</span>
+      </div>
+      <button class="btn btn-small btn-outline" data-unmute="${m.id}" type="button">Unmute</button>
+    </div>`).join("");
+  const reports = myReportList.map((r) => `
+    <div class="safety-row">
+      <div class="safety-body">
+        <strong>“${esc((r.preview || "").slice(0, 60))}${(r.preview || "").length > 60 ? "…" : ""}”</strong>
+        <span>${esc(r.reason || "")}${r.community ? ` · c/${esc(r.community)}` : ""} · ${esc(r.time || "")}${r.gone ? " · post removed" : ""}</span>
+      </div>
+      <span class="status-pill ${r.status === "under review" ? "review" : ""}">${esc(r.status || "received")}${r.reportCount > 1 ? ` · ${r.reportCount}` : ""}</span>
+    </div>`).join("");
+  box.innerHTML = `
+    <div class="safety-card">
+      <h3>🔇 Muted accounts <small>${mutedList.length}</small></h3>
+      ${muted || `<p class="safety-empty">Nobody muted. Muting hides someone's posts and replies from your feed — tap 🔇 on any post.</p>`}
+    </div>
+    <div class="safety-card">
+      <h3>🚩 My reports <small>${myReportList.length}</small></h3>
+      ${reports || (useBackend
+        ? `<p class="safety-empty">No reports yet. Tap 🚩 on a post that breaks the guidelines — it's always private.</p>`
+        : `<p class="safety-empty">Connect to see report status. Muting works offline too.</p>`)}
+    </div>`;
+}
+
+function syncLocalUnmute(id, name) {
+  try {
+    const key = "minco_muted_v1";
+    const m = JSON.parse(localStorage.getItem(key)) || { ids: [], names: [] };
+    m.ids = (m.ids || []).filter((x) => String(x) !== String(id));
+    if (name) m.names = (m.names || []).filter((x) => x !== name);
+    localStorage.setItem(key, JSON.stringify(m));
+  } catch {}
+}
+
+async function onTabAction(e) {
+  const btn = e.target.closest("button[data-unmute]");
+  if (!btn) return;
+  const id = btn.dataset.unmute;
+  const entry = mutedList.find((m) => String(m.id) === String(id));
+  btn.disabled = true;
+  try {
+    if (useBackend) await API().unmuteUser(Number(id));
+  } catch (err) {
+    btn.disabled = false;
+    alert(err.message || "Couldn't unmute — try again.");
+    return;
+  }
+  syncLocalUnmute(id, entry?.name);
+  mutedList = mutedList.filter((m) => String(m.id) !== String(id));
   renderTab();
 }
 
@@ -337,6 +411,7 @@ document.getElementById("profileTabs").addEventListener("click", (e) => {
   activeTab = btn.dataset.tab;
   renderTab();
 });
+document.getElementById("tabContent").addEventListener("click", onTabAction);
 
 document.getElementById("shareBtn").addEventListener("click", async (e) => {
   const btn = e.target;

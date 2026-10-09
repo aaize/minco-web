@@ -208,6 +208,30 @@
     <img id="lightboxImg" alt="Expanded post image" />
   </div>
 
+  <!-- Report modal -->
+  <div class="compose-overlay hidden" id="reportOverlay">
+    <section class="compose-panel" role="dialog" aria-label="Report post" aria-modal="true">
+      <div class="compose-panel-head">
+        <h2>Report this post</h2>
+        <button id="reportClose" aria-label="Close report form">✕</button>
+      </div>
+      <p class="report-sub">Flag it for review. Reports are private — the author never sees who reported.</p>
+      <div class="report-reasons" role="radiogroup" aria-label="Report reason">
+        <label><input type="radio" name="reportReason" value="spam" /> Spam or scam</label>
+        <label><input type="radio" name="reportReason" value="unkind" checked /> Unkind / disrespectful</label>
+        <label><input type="radio" name="reportReason" value="unsafe" /> Unsafe content</label>
+        <label><input type="radio" name="reportReason" value="medical" /> Medical advice / diagnosis</label>
+        <label><input type="radio" name="reportReason" value="other" /> Something else</label>
+      </div>
+      <input id="reportDetail" type="text" maxlength="200" placeholder="Anything we should know? (optional)" aria-label="Report detail" />
+      <p class="form-error" id="reportError" role="alert"></p>
+      <div class="report-actions">
+        <button class="btn btn-outline btn-small" id="reportCancelBtn" type="button">Cancel</button>
+        <button class="btn btn-primary btn-small" id="reportSubmitBtn" type="button">Send report</button>
+      </div>
+    </section>
+  </div>
+
   <!-- Toasts -->
   <div class="toasts" id="toasts"></div>
 

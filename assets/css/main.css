@@ -301,6 +301,7 @@ a { text-decoration: none; color: inherit; }
 [data-theme="dark"] .edit-panel,
 [data-theme="dark"] .mini-post,
 [data-theme="dark"] .about-card,
+[data-theme="dark"] .safety-card,
 [data-theme="dark"] .habit-form-card,
 [data-theme="dark"] .habit-list-card,
 [data-theme="dark"] .post-card,
@@ -349,6 +350,7 @@ a { text-decoration: none; color: inherit; }
 [data-theme="dark"] .options label,
 [data-theme="dark"] .save-btn,
 [data-theme="dark"] .rsvp-btn,
+[data-theme="dark"] .report-reasons label,
 [data-theme="dark"] .profile-tabs button:not(.active),
 [data-theme="dark"] .kind-tabs button:not(.active),
 [data-theme="dark"] .game-tabs button:not(.active) {

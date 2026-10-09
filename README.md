@@ -28,6 +28,9 @@
 - **Notifications** — replies + loves on your posts, unread badge, 30s polling
 - **SOS safety net** — one-tap floating button on every page with crisis helplines,
   breathing resets and calm next steps
+- **Safety controls** — mute members (posts + replies hidden, reversible),
+  report posts with reasons and track received/under-review/removed status
+  in Profile → Safety, plus rate limits on login/register/chat
 - **Minco Helper chat** — floating companion on every page backed by `POST /api/chat`
   (crisis-first rules, peer-support only), quick-reply chips, offline answers,
   per-account history, crisis replies escalate to the SOS panel
@@ -36,10 +39,10 @@
 
 ## Quality
 
-- **31 pytest tests** (`backend/tests/`, run: `pip install -r backend/requirements-dev.txt
+- **36 pytest tests** (`backend/tests/`, run `pip install -r backend/requirements-dev.txt
   && python -m pytest backend/tests -q`) covering auth, posts, polls, habits,
-  resources, moods, journal, chat, headers and PWA routes — enforced by GitHub Actions CI
-  (plus `node --check` over all frontend JS).
+  resources, moods, journal, chat, safety, headers and PWA routes — enforced by
+  GitHub Actions CI (plus `node --check` over all frontend JS).
 
 ## Architecture
 
@@ -84,6 +87,7 @@ as an alternative host.
 |---|---|
 | Auth | `POST /api/register`, `POST /api/login`, `GET/PUT /api/me`, `POST /api/logout` |
 | Posts | `GET/POST /api/posts`, `PUT/DELETE /api/posts/<id>`, `…/vote`, `…/love`, `…/replies`, `…/save`, `…/report`, `…/poll/vote` |
+| Safety | `GET/POST /api/blocks`, `DELETE /api/blocks/<id>`, `GET /api/reports/mine` (enriched) |
 | Moods | `GET/POST /api/moods` |
 | Habits | `GET/POST /api/habits`, `…/<id>/check`, `DELETE …` |
 | Journal | `GET/POST /api/journal`, `GET/PUT/DELETE /api/journal/<id>` |

@@ -36,6 +36,12 @@ async function pullFromBackend() {
   );
   // Server shape already matches the local model
   savePosts(posts);
+  try {
+    const { blocked } = await API().listBlocks();
+    const m = getMuted();
+    const ids = new Set([...m.ids.map(String), ...(blocked || []).map((b) => String(b.id))]);
+    saveMuted({ ...m, ids: [...ids] });
+  } catch { /* mute sync is best-effort */ }
   renderFeed();
   refreshNotifications().catch(() => {});
 }
@@ -62,6 +68,21 @@ const getPosts = () => {
   catch { return []; }
 };
 const savePosts = (p) => localStorage.setItem(POSTS_KEY, JSON.stringify(p));
+
+// ---------- muted members (backend blocks + offline fallback) ----------
+const MUTED_KEY = "minco_muted_v1";
+const getMuted = () => {
+  try { return JSON.parse(localStorage.getItem(MUTED_KEY)) || { ids: [], names: [] }; }
+  catch { return { ids: [], names: [] }; }
+};
+const saveMuted = (m) => {
+  try { localStorage.setItem(MUTED_KEY, JSON.stringify(m)); } catch {}
+};
+const isMuted = (p) => {
+  const m = getMuted();
+  return (p.authorId != null && m.ids.map(String).includes(String(p.authorId))) ||
+    m.names.includes(p.name);
+};
 
 // ---------- seed ----------
 if (getPosts().length === 0) {
@@ -188,7 +209,7 @@ function renderUser() {
 
 // ---------- render: feed ----------
 function sortedFiltered() {
-  let posts = getPosts();
+  let posts = getPosts().filter((p) => !isMuted(p));
   if (activeCommunity !== "all") posts = posts.filter((p) => p.community === activeCommunity);
   if (searchQuery) posts = posts.filter((p) => matchesSearch(p, searchQuery));
   const arr = [...posts];
@@ -257,6 +278,8 @@ function postHTML(p, i) {
         <button class="action-btn" data-act="share" data-id="${p.id}">${ICON.share} Share</button>
         ${isMine ? `<button class="action-btn owner" data-act="edit" data-id="${p.id}" title="Edit your post">✏️ Edit</button>
         <button class="action-btn owner danger" data-act="delete" data-id="${p.id}" title="Delete your post">🗑️</button>` : ""}
+        ${!isMine && p.authorId ? `<button class="action-btn quiet" data-act="mute" data-id="${p.id}" data-author="${p.authorId}" data-name="${esc(p.name)}" title="Mute ${esc(p.name)} — hide their posts">🔇</button>
+        <button class="action-btn quiet" data-act="report" data-id="${p.id}" title="Report this post">🚩</button>` : ""}
       </div>
       <div class="replies ${p.replies.length ? "" : "hidden"}" id="replies-${p.id}">
         ${p.replies.map(replyHTML).join("")}
@@ -381,6 +404,12 @@ document.getElementById("feed").addEventListener("click", (e) => {
   if (act === "delete") {
     deletePostFlow(id, btn);
   }
+  if (act === "mute") {
+    muteFlow(id, btn);
+  }
+  if (act === "report") {
+    openReport(id);
+  }
 });
 
 // ---------- edit / delete own posts ----------
@@ -456,8 +485,84 @@ async function saveEditMode(id, btn) {
   toast("Post updated.");
 }
 
-async function deletePostFlow(id, btn) {
+// ---------- mute (hide someone's posts + replies, reversible in Profile) ----------
+async function muteFlow(id, btn) {
   const post = getPosts().find((p) => p.id === id);
+  if (!post) return;
+  if (!window.confirm(
+    `Mute ${post.name}? Their posts and replies will be hidden from your feed. You can unmute anytime in Profile → Safety.`
+  )) return;
+  if (btn) btn.disabled = true;
+  const m = getMuted();
+  if (post.authorId != null && !m.ids.map(String).includes(String(post.authorId))) {
+    m.ids.push(post.authorId);
+  }
+  if (!m.names.includes(post.name)) m.names.push(post.name);
+  if (useBackend && typeof id === "number" && id < 1e12 && post.authorId != null) {
+    try {
+      await API().muteUser(Number(post.authorId));
+    } catch (err) {
+      toast(err.message || "Couldn't mute — try again.");
+      if (btn) btn.disabled = false;
+      return;
+    }
+  }
+  saveMuted(m);
+  renderFeed();
+  toast(`Muted ${post.name} — take care of yourself. 💜`);
+}
+
+// ---------- report (reason + optional detail, one per post) ----------
+const REPORT_REASONS = [
+  ["spam", "Spam or scam"],
+  ["unkind", "Unkind / disrespectful"],
+  ["unsafe", "Unsafe content"],
+  ["medical", "Medical advice / diagnosis"],
+  ["other", "Something else"],
+];
+let reportPostId = null;
+
+function openReport(id) {
+  reportPostId = id;
+  const wrap = document.getElementById("reportOverlay");
+  if (!wrap) return;
+  wrap.querySelectorAll('input[name="reportReason"]').forEach((r) => (r.checked = r.value === "unkind"));
+  document.getElementById("reportDetail").value = "";
+  document.getElementById("reportError").textContent = "";
+  wrap.classList.remove("hidden");
+}
+function closeReport() {
+  document.getElementById("reportOverlay")?.classList.add("hidden");
+  reportPostId = null;
+}
+
+async function submitReport() {
+  if (reportPostId == null) return;
+  const reason = document.querySelector('input[name="reportReason"]:checked')?.value;
+  const detail = document.getElementById("reportDetail").value.trim().slice(0, 200);
+  const errEl = document.getElementById("reportError");
+  if (!reason) {
+    errEl.textContent = "Pick a reason first.";
+    return;
+  }
+  if (!useBackend) {
+    errEl.textContent = "Reporting needs a connection — your mute still works offline.";
+    return;
+  }
+  const btn = document.getElementById("reportSubmitBtn");
+  btn.disabled = true;
+  try {
+    await API().reportPost(Number(reportPostId), reason, detail);
+    closeReport();
+    renderFeed();
+    toast("Thank you — we see it. Track status in Profile → Safety.");
+  } catch (err) {
+    errEl.textContent = err.message || "Couldn't send — try again.";
+  }
+  btn.disabled = false;
+}
+
+async function deletePostFlow(id, btn) {  const post = getPosts().find((p) => p.id === id);
   if (!post) return;
   if (!window.confirm("Delete this post? Replies and loves go with it. This can't be undone.")) return;
   if (btn) btn.disabled = true;
@@ -664,6 +769,14 @@ document.getElementById("quickPollMore")?.addEventListener("click", () => {
 });
 document.getElementById("quickPollRemove")?.addEventListener("click", resetPollComposer);
 
+// ---------- report modal wiring ----------
+document.getElementById("reportClose")?.addEventListener("click", closeReport);
+document.getElementById("reportCancelBtn")?.addEventListener("click", closeReport);
+document.getElementById("reportOverlay")?.addEventListener("click", (e) => {
+  if (e.target.id === "reportOverlay") closeReport();
+});
+document.getElementById("reportSubmitBtn")?.addEventListener("click", submitReport);
+
 quickText?.addEventListener("input", () => (quickCount.textContent = `${quickText.value.length}/280`));
 document.getElementById("composeFab")?.addEventListener("click", openCompose);
 document.getElementById("composeClose")?.addEventListener("click", closeCompose);
@@ -742,6 +855,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     if (notifOpen) { setNotifOpen(false); return; }
     if (!document.getElementById("composeOverlay")?.classList.contains("hidden")) { closeCompose(); return; }
+    if (!document.getElementById("reportOverlay")?.classList.contains("hidden")) { closeReport(); return; }
     document.getElementById("lightbox").classList.add("hidden");
     if (document.activeElement === searchInput && searchQuery) clearSearch();
     searchInput.blur();

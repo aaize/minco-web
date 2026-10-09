@@ -94,5 +94,8 @@
     deleteHabit: (id) => req(`/api/habits/${id}`, { method: "DELETE", auth: true }),
     votePoll: (id, option) =>
       req(`/api/posts/${id}/poll/vote`, { method: "POST", auth: true, body: { option } }),
+    listBlocks: () => req("/api/blocks", { auth: true }),
+    muteUser: (userId) => req("/api/blocks", { method: "POST", auth: true, body: { user_id: userId } }),
+    unmuteUser: (userId) => req(`/api/blocks/${userId}`, { method: "DELETE", auth: true }),
   };
 })();

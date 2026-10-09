@@ -109,12 +109,17 @@ def init_db():
           post_id INTEGER NOT NULL UNIQUE REFERENCES posts(id) ON DELETE CASCADE,
           options TEXT NOT NULL DEFAULT '[]',
           created_at INTEGER NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS poll_votes (
+        );        CREATE TABLE IF NOT EXISTS poll_votes (
           poll_id INTEGER NOT NULL REFERENCES polls(id) ON DELETE CASCADE,
           user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
           option_idx INTEGER NOT NULL,
           PRIMARY KEY (poll_id, user_id)
+        );
+        CREATE TABLE IF NOT EXISTS blocks (
+          blocker_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          created_at INTEGER NOT NULL,
+          PRIMARY KEY (blocker_id, blocked_id)
         );
         CREATE TABLE IF NOT EXISTS habits (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -419,12 +424,18 @@ def validate_poll_options(raw):
 
 def post_to_dict(p, viewer_id=None):
     db = get_db()
+    blocked = set()
+    if viewer_id:
+        blocked = {r["blocked_id"] for r in db.execute(
+            "SELECT blocked_id FROM blocks WHERE blocker_id = ?", (viewer_id,)
+        ).fetchall()}
     replies = [
         dict(id=r["id"], name=r["name"], text=r["text"],
              time=time_ago(r["created_at"]), ts=r["created_at"])
         for r in db.execute(
             "SELECT * FROM replies WHERE post_id = ? ORDER BY created_at ASC", (p["id"],)
         ).fetchall()
+        if not (r["user_id"] and r["user_id"] in blocked)
     ]
     user_vote, loved = 0, False
     saved, saves = False, 0
@@ -452,6 +463,7 @@ def post_to_dict(p, viewer_id=None):
         "loves": p["loves"], "userVote": user_vote, "loved": loved,
         "saves": saves, "saved": saved,
         "poll": get_poll_for_post(p["id"], viewer_id),
+        "authorId": p["user_id"],
         "mine": bool(viewer_id) and p["user_id"] == viewer_id,
         "time": time_ago(p["created_at"]), "ts": p["created_at"], "replies": replies,
     }
@@ -562,6 +574,37 @@ def chat_reply(message: str):
 
 
 # ---------------- api ----------------
+# Simple per-IP rate limiting for public endpoints (abuse guard for a
+# peer-support app). In-memory sliding window; tune for production use.
+RATE_LIMIT_MAX = 120
+RATE_LIMIT_WINDOW = 300
+_RATE_BUCKETS = {}
+
+
+def rate_limited(key):
+    """Record a hit; return (limited, retry_after_seconds)."""
+    now = time.time()
+    hits = [t for t in _RATE_BUCKETS.get(key, []) if now - t < RATE_LIMIT_WINDOW]
+    if len(hits) >= RATE_LIMIT_MAX:
+        return True, max(1, int(RATE_LIMIT_WINDOW - (now - hits[0])))
+    hits.append(now)
+    _RATE_BUCKETS[key] = hits
+    if len(_RATE_BUCKETS) > 5000:  # don't let the dict grow unbounded
+        _RATE_BUCKETS.clear()
+    return False, 0
+
+
+def check_rate_limit(bucket):
+    key = f"{bucket}:{request.remote_addr or 'unknown'}"
+    limited, retry = rate_limited(key)
+    if limited:
+        resp = jsonify({"error": "Too many attempts — please wait a bit and try again."})
+        resp.status_code = 429
+        resp.headers["Retry-After"] = str(retry)
+        return resp
+    return None
+
+
 @app.get("/api/health")
 def health():
     return jsonify({"ok": True, "ai": os.environ.get("AI_PROVIDER", "") or "offline-rules"})
@@ -569,6 +612,9 @@ def health():
 
 @app.post("/api/register")
 def register():
+    limited = check_rate_limit("register")
+    if limited:
+        return limited
     data = request.get_json(force=True, silent=True) or {}
     name = (data.get("name") or "").strip()
     email = (data.get("email") or "").strip().lower()
@@ -596,6 +642,9 @@ def register():
 
 @app.post("/api/login")
 def login():
+    limited = check_rate_limit("login")
+    if limited:
+        return limited
     data = request.get_json(force=True, silent=True) or {}
     email = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
@@ -672,6 +721,11 @@ def list_posts():
     db = get_db()
     rows = db.execute("SELECT * FROM posts ORDER BY created_at DESC LIMIT 200").fetchall()
     posts = [post_to_dict(p, viewer_id) for p in rows]
+    if viewer_id:
+        muted = {r["blocked_id"] for r in db.execute(
+            "SELECT blocked_id FROM blocks WHERE blocker_id = ?", (viewer_id,)
+        ).fetchall()}
+        posts = [p for p in posts if not (p["authorId"] and p["authorId"] in muted)]
     if mine_only:
         posts = [p for p in posts if p["mine"]]
     if community != "all":
@@ -881,12 +935,13 @@ def delete_post(pid):
         return jsonify({"error": "Post not found."}), 404
     if p["user_id"] != g.user["id"]:
         return jsonify({"error": "Only the author can delete this post."}), 403
-    # Manual cascade (SQLite FKs off by default)
+    # Manual cascade (SQLite FKs off by default).
+    # NOTE: reports are deliberately preserved (not cascaded) so reporters
+    # keep a record — my_reports marks them gone once the post is removed.
     db.execute("DELETE FROM votes WHERE post_id = ?", (pid,))
     db.execute("DELETE FROM loves WHERE post_id = ?", (pid,))
     db.execute("DELETE FROM replies WHERE post_id = ?", (pid,))
     db.execute("DELETE FROM saves WHERE post_id = ?", (pid,))
-    db.execute("DELETE FROM reports WHERE post_id = ?", (pid,))
     db.execute("DELETE FROM poll_votes WHERE poll_id IN (SELECT id FROM polls WHERE post_id = ?)", (pid,))
     db.execute("DELETE FROM polls WHERE post_id = ?", (pid,))
     db.execute("DELETE FROM notifications WHERE post_id = ?", (pid,))
@@ -904,7 +959,12 @@ def list_saves():
         " WHERE s.user_id = ? ORDER BY s.created_at DESC LIMIT 100",
         (g.user["id"],),
     ).fetchall()
-    return jsonify({"posts": [post_to_dict(p, g.user["id"]) for p in rows]})
+    muted = {r["blocked_id"] for r in db.execute(
+        "SELECT blocked_id FROM blocks WHERE blocker_id = ?", (g.user["id"],)
+    ).fetchall()}
+    posts = [post_to_dict(p, g.user["id"]) for p in rows]
+    return jsonify({"posts": [
+        p for p in posts if not (p["authorId"] and p["authorId"] in muted)]})
 
 
 @app.post("/api/posts/<int:pid>/save")
@@ -964,7 +1024,73 @@ def my_reports():
         "SELECT post_id, reason, created_at FROM reports WHERE user_id = ? ORDER BY created_at DESC LIMIT 100",
         (g.user["id"],),
     ).fetchall()
-    return jsonify({"reports": [dict(r) for r in rows]})
+    out = []
+    for r in rows:
+        post = db.execute(
+            "SELECT text, community FROM posts WHERE id = ?", (r["post_id"],)
+        ).fetchone()
+        count = db.execute(
+            "SELECT COUNT(*) c FROM reports WHERE post_id = ?", (r["post_id"],)
+        ).fetchone()["c"]
+        out.append({
+            "postId": r["post_id"], "reason": r["reason"],
+            "ts": r["created_at"], "time": time_ago(r["created_at"]),
+            "preview": (post["text"][:80] if post else "(post removed)"),
+            "community": (post["community"] if post else ""),
+            "gone": post is None,
+            "reportCount": count,
+            "status": "under review" if count >= 2 else "received",
+        })
+    return jsonify({"reports": out})
+
+
+@app.get("/api/blocks")
+@require_auth
+def list_blocks():
+    db = get_db()
+    rows = db.execute(
+        "SELECT u.id, u.name, b.created_at FROM blocks b"
+        " JOIN users u ON u.id = b.blocked_id"
+        " WHERE b.blocker_id = ? ORDER BY b.created_at DESC LIMIT 100",
+        (g.user["id"],),
+    ).fetchall()
+    return jsonify({"blocked": [
+        {"id": r["id"], "name": r["name"],
+         "ts": r["created_at"], "time": time_ago(r["created_at"])}
+        for r in rows]})
+
+
+@app.post("/api/blocks")
+@require_auth
+def create_block():
+    data = request.get_json(force=True, silent=True) or {}
+    try:
+        blocked_id = int(data.get("user_id", 0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Pick a member to mute."}), 400
+    if blocked_id == g.user["id"]:
+        return jsonify({"error": "You can't mute yourself."}), 400
+    db = get_db()
+    target = db.execute("SELECT id, name FROM users WHERE id = ?", (blocked_id,)).fetchone()
+    if not target:
+        return jsonify({"error": "Member not found."}), 404
+    db.execute(
+        "INSERT INTO blocks (blocker_id, blocked_id, created_at) VALUES (?,?,?)"
+        " ON CONFLICT(blocker_id, blocked_id) DO NOTHING",
+        (g.user["id"], blocked_id, int(time.time() * 1000)),
+    )
+    db.commit()
+    return jsonify({"ok": True, "muted": {"id": target["id"], "name": target["name"]}}), 201
+
+
+@app.delete("/api/blocks/<int:bid>")
+@require_auth
+def delete_block(bid):
+    db = get_db()
+    db.execute("DELETE FROM blocks WHERE blocker_id = ? AND blocked_id = ?",
+               (g.user["id"], bid))
+    db.commit()
+    return jsonify({"ok": True})
 
 
 @app.get("/api/notifications")
@@ -1598,6 +1724,9 @@ def delete_habit(hid):
 
 @app.post("/api/chat")
 def chat():
+    limited = check_rate_limit("chat")
+    if limited:
+        return limited
     data = request.get_json(force=True, silent=True) or {}
     message = (data.get("message") or "").strip()[:500]
     if not message:

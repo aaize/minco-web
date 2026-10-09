@@ -1,6 +1,6 @@
 ---
 type: entity
-updated: 2026-10-02
+updated: 2026-10-09
 sources: index.html, pages/, assets/js/, assets/css/, sw.js
 ---
 
@@ -12,14 +12,14 @@ No framework. Vanilla HTML/CSS/JS. Design tokens in `assets/css/main.css`. Each 
 
 - `index.html` — landing (hero, features, 4 steps, CTA). JS: `assets/js/main.js`, `landing.js`, `sos.js`
 - `pages/register.html` + `pages/login.html` — auth, JS `assets/js/auth.js`, CSS `auth.css` — [[auth-sessions]]
-- `pages/home.html` — feed, main user page. JS `home.js`, CSS `home.css` — [[community-feed]]
+- `pages/home.html` — feed, main user page. JS `home.js`, CSS `home.css` — [[community-feed]] (mute/report buttons, report modal, poll composer)
 - `pages/checkin.html` — questionnaires + stats dashboard. JS `checkin.js` — [[wellbeing-checkin]]
 - `pages/journal.html` — private journal. JS `journal.js` — [[private-journal]]
 - `pages/habits.html` — habits. JS `habits.js` — [[habits-gratitude-polls]]
 - `pages/meetings.html` — meetings board. JS `meetings.js` — [[meetings-board]]
 - `pages/resources.html` — library. JS `resources.js` — [[resource-library]]
 - `pages/games.html` — break page (breathing, memory match, tic-tac-toe). JS `games.js`
-- `pages/profile.html` — Instagram-style profile. JS `profile.js` — [[notifications-karma]]
+- `pages/profile.html` — Instagram-style profile. JS `profile.js` — [[notifications-karma]] (Safety tab: muted list + report status — [[safety-privacy]])
 - `pages/guidelines.html` — static safe-space rules — [[safety-privacy]]
 
 ## Shared JS

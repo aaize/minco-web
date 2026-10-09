@@ -378,6 +378,29 @@ Env: HOST, PORT, DATABASE, FLASK_DEBUG / RENDER, AI_PROVIDER (future).
    Fields: title (2-40), icon (optional, from fixed emoji set, max 12/user).
    Flow: GET /api/habits -> cards with today tick, streak pill (2+ days),
    7-day dots, totals -> POST /api/habits/<id>/check toggles today ->
-   DELETE removes habit + logs. Offline: minco_habits_v1 [{id,title,icon,
+   DELETE removes habit + logs.    Offline: minco_habits_v1 [{id,title,icon,
    logs[dates]}] with mirrored streak math. Page: pages/habits.html,
    linked from home side-nav. Tables: habits + habit_logs(habit,user,date).
+
+ 18. SAFETY CONTROLS WORKFLOW (mute + report + rate limits)
+ ----------------------------------------------------------
+ MUTE (soft block, reversible, per-account):
+   Feed shows 🔇 on others' posts (needs authorId; legacy NULL-author seeds
+   can't be muted). Confirm -> POST /api/blocks {user_id} (201, idempotent;
+   400 self, 404 unknown) + local minco_muted_v1 {ids, names} update.
+   Server hides muted posts in GET /api/posts and /api/saves and strips
+   their replies in post_to_dict; client filters too (sortedFiltered +
+   pullFromBackend merges GET /api/blocks). Unmute in Profile -> Safety tab
+   (DELETE /api/blocks/<id>) syncs both stores. Table: blocks(blocker,blocked).
+ REPORT (private, one per user/post):
+   Feed 🚩 opens a modal (spam|unkind|unsafe|medical|other + detail<=200).
+   POST /api/posts/<id>/report -> 201 {reports} / 409 repeat. Needs a
+   connection (offline shows a hint; mute still works offline).
+   Profile -> Safety lists GET /api/reports/mine enriched rows:
+   preview, reason, community, time, reportCount, status received (<2) or
+   under review, gone + "(post removed)" when the post is deleted.
+   Reports are preserved on post delete (unlike votes/loves) as the
+   reporter's audit trail.
+ RATE LIMITS: in-memory sliding window (120 hits / 300s per IP, per
+   endpoint) on register/login/chat -> 429 + Retry-After. Tune constants
+   RATE_LIMIT_MAX/WINDOW for production.

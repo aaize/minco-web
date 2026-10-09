@@ -1,14 +1,14 @@
 ---
 type: entity
-updated: 2026-10-02
-sources: backend/app.py:44-320, backend/NOTES.txt:30-61
+updated: 2026-10-09
+sources: backend/app.py:44-320+blocks, backend/NOTES.txt:30-61
 ---
 
 # Database Schema
 
 File: `backend/minco.db` (git-ignored, auto-created + seeded on boot via `init_db()` at `backend/app.py:44`). Delete to reset. Live PA DB and local DB are separate.
 
-## Tables (19)
+## Tables (20)
 
 - `users(id, name, email UNIQUE, password_hash, created_at, bio, avatar)` — bio/avatar via `ALTER TABLE` migration on boot — [[auth-sessions]]
 - `sessions(token PK, user_id, created_at)` — Bearer tokens — [[auth-sessions]]
@@ -17,7 +17,8 @@ File: `backend/minco.db` (git-ignored, auto-created + seeded on boot via `init_d
 - `loves(post_id, user_id)` — [[community-feed]], [[notifications-karma]]
 - `replies(id, post_id, user_id, name, text, created_at)` — [[community-feed]]
 - `saves(post_id, user_id, created_at)` PK — bookmarks, counts via `COUNT(*)` — [[community-feed]]
-- `reports(id, post_id, user_id, reason, created_at)` UNIQUE(post,user) — [[safety-privacy]]
+- `reports(id, post_id, user_id, reason, created_at)` UNIQUE(post,user) — preserved on post delete (reporter audit trail) — [[safety-privacy]]
+- `blocks(blocker_id, blocked_id, created_at)` PK pair — mute/soft-block — [[safety-privacy]]
 - `polls(id, post_id UNIQUE, options JSON, created_at)` + `poll_votes(poll_id, user_id, option_idx)` — [[habits-gratitude-polls]]
 - `habits(id, user_id, title, icon, created_at)` + `habit_logs(habit_id, user_id, date, created_at)` PK — [[habits-gratitude-polls]]
 - `journal_entries(id, user_id NOT NULL, title, text, mood, created_at, updated_at)` — private, always filtered by user_id — [[private-journal]]
@@ -26,7 +27,7 @@ File: `backend/minco.db` (git-ignored, auto-created + seeded on boot via `init_d
 - `moods(id, user_id, date YYYY-MM-DD, mood, score 1-5, note, created_at)` UNIQUE(user,date) — [[mood-calendar]]
 - `notifications(id, user_id=recipient, actor_id, actor_name, type=reply|love, post_id, preview<=80, created_at, read)` — deleted with post — [[notifications-karma]]
 
-FKs declared but SQLite FKs off by default → manual cascades in `DELETE /api/posts/<id>` (`app.py:875`).
+FKs declared but SQLite FKs off by default → manual cascades in `DELETE /api/posts/<id>` (`backend/app.py:931`; reports deliberately excluded).
 
 ## Seeds
 

@@ -1,7 +1,7 @@
 ---
 type: concept
-updated: 2026-10-02
-sources: pages/home.html, assets/js/home.js, backend/app.py:662-967
+updated: 2026-10-09
+sources: pages/home.html, assets/js/home.js, backend/app.py:662-967+blocks+reports
 ---
 
 # Community Feed
@@ -12,7 +12,7 @@ Seeds: 4 starter posts if empty. Communities: calm, sleep, stress, wins. Sort: h
 
 ## View
 
-`GET /api/posts?sort=&community=&q=&mine=` (auth optional). Server returns ≤200 posts with replies, `userVote/loved/saved/mine`, time-ago. Client re-filters/sorts locally. Hot score = `ups - downs + loves*0.5`.
+`GET /api/posts?sort=&community=&q=&mine=` (auth optional). Server returns ≤200 posts with replies, `userVote/loved/saved/mine`, `authorId`, time-ago. Muted authors' posts excluded server-side (`blocks`); client re-filters via `minco_muted_v1` + re-sorts locally. Hot score = `ups - downs + loves*0.5`.
 
 ## Post
 
@@ -24,9 +24,10 @@ Floating quick-post button (bottom-right) or welcome-banner composer: community 
 - Love → `POST .../love` toggle; liking others' post notifies author — [[notifications-karma]]
 - Reply → `POST .../replies {text≤200}`; replying to others notifies author
 - Share → copies link `#post-<id>` + toast
-- Save → `POST .../save` toggle; `GET /api/saves` lists
-- Report → `POST .../report {reason: spam|unkind|unsafe|medical|other, detail≤200}`; one per user/post (409 repeat); `GET /api/reports/mine` — [[safety-privacy]]
-- Delete own → `DELETE /api/posts/<id>` owner-only + manual cascade (votes, loves, replies, saves, reports, polls, notifications)
+- Save → `POST .../save` toggle; `GET /api/saves` lists (muted authors filtered)
+- Mute → 🔇 on others' posts (needs `authorId`; legacy NULL-author seeds can't be muted) → `POST /api/blocks`, hides instantly, unmute in Profile → Safety — [[safety-privacy]]
+- Report → 🚩 opens reason modal → `POST .../report {reason: spam|unkind|unsafe|medical|other, detail≤200}`; one per user/post (409 repeat); status in Profile → Safety via enriched `GET /api/reports/mine` — [[safety-privacy]]
+- Delete own → `DELETE /api/posts/<id>` owner-only + manual cascade (votes, loves, replies, saves, polls, notifications — reports preserved as audit trail)
 - Edit own → `PUT /api/posts/<id>` text/community
 
 Polls attached to posts live in [[habits-gratitude-polls]]. Karma/streaks in [[notifications-karma]].

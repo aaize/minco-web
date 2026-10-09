@@ -1,6 +1,6 @@
 ---
 type: synthesis
-updated: 2026-10-02
+updated: 2026-10-09
 sources: README.md, WORKFLOW.txt, CONVERSATION.txt, index.html
 ---
 
@@ -12,7 +12,7 @@ Tagline from `README.md:3`: "You're not alone."
 
 ## What it does
 
-- [[community-feed]] — topic spaces (calm, sleep, stress, wins), votes, loves, replies, saves, reports, polls, search, sort hot/new/top
+- [[community-feed]] — topic spaces (calm, sleep, stress, wins), votes, loves, replies, saves, reports, polls, mute, search, sort hot/new/top
 - [[mood-calendar]] — one-tap daily check-in, weekly average, streaks, care nudges
 - [[wellbeing-checkin]] — private low-mood (9Q) / worry (7Q) screeners, 100% on-device, trends + insights
 - [[private-journal]] — per-account entries, mood tags, export
@@ -30,7 +30,7 @@ Browser ([[frontend-shell]]) → Flask `backend/app.py` ([[backend-api]]) → SQ
 - Auth: Bearer-token [[auth-sessions]], scrypt passwords
 - Pattern: [[offline-first]] — backend-first, silent localStorage fallback, never hard-crashes
 - PWA: installable offline shell, see [[pwa-deployment]]
-- Safety: [[safety-privacy]] by design — guidelines gates, no medical-advice language, crisis helplines
+- Safety: [[safety-privacy]] by design — guidelines gates, no medical-advice language, crisis helplines, mute + report status, auth/chat rate limits
 
 ## Entry points
 
